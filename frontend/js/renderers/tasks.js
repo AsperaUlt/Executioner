@@ -1,4 +1,41 @@
 (function attachTaskRenderer(global) {
+  function streamMeta(state) {
+    switch (state) {
+      case "current":
+        return {
+          label: "Current",
+          rowClass: "border-primary/20 bg-primary/10 shadow-neon",
+          titleClass: "truncate text-sm font-semibold text-white",
+          etaClass: "mt-1 text-xs text-primary/80",
+          badgeClass: "bg-primary text-slate-950 border border-primary",
+        };
+      case "next":
+        return {
+          label: "Next",
+          rowClass: "border-secondary/20 bg-secondary/10",
+          titleClass: "truncate text-sm font-semibold text-white",
+          etaClass: "mt-1 text-xs text-secondary/80",
+          badgeClass: "bg-secondary/20 text-secondary border border-secondary/20",
+        };
+      case "completed":
+        return {
+          label: "Completed",
+          rowClass: "border-white/5 bg-white/[0.02] opacity-60",
+          titleClass: "truncate text-sm font-semibold text-slate-300",
+          etaClass: "mt-1 text-xs text-slate-500",
+          badgeClass: "bg-white/[0.05] text-slate-400 border border-white/10",
+        };
+      default:
+        return {
+          label: "Queued",
+          rowClass: "border-white/5 bg-white/[0.03]",
+          titleClass: "truncate text-sm font-semibold text-white",
+          etaClass: "mt-1 text-xs text-slate-400",
+          badgeClass: "bg-white/[0.05] text-slate-300 border border-white/10",
+        };
+    }
+  }
+
   function statusMeta(status) {
     switch (status) {
       case "done":
@@ -31,11 +68,11 @@
     }
 
     items.forEach((task, idx) => {
-      const meta = statusMeta(task?.status);
+      const meta = streamMeta(task?.streamState);
       let row = host.children[idx];
       if (!row) {
         row = document.createElement("article");
-        row.className = "flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/5 bg-white/[0.03] p-4";
+        row.className = "flex items-center justify-between gap-4 rounded-[1.4rem] border p-4 transition";
 
         const left = document.createElement("div");
         left.className = "min-w-0 flex-1";
@@ -56,6 +93,9 @@
 
       const left = row.children[0];
       const status = row.children[1];
+      row.className = `flex items-center justify-between gap-4 rounded-[1.4rem] border p-4 transition ${meta.rowClass}`;
+      left.children[0].className = meta.titleClass;
+      left.children[1].className = meta.etaClass;
       left.children[0].textContent = task?.title ?? "Untitled Task";
       left.children[1].textContent = `ETA ${task?.eta ?? "--:--"}`;
       status.textContent = meta.label;
@@ -110,24 +150,28 @@
     });
   }
 
-  function renderTasks(tasks) {
-    if (!Array.isArray(tasks)) {
+  function renderTasks(tasks, taskStream) {
+    if (!Array.isArray(tasks) && !Array.isArray(taskStream?.items)) {
       return;
     }
 
-    const items = tasks.slice(0, 6);
-    const nextKey = JSON.stringify(items.map((task) => [task?.id ?? "", task?.title ?? "", task?.eta ?? "", task?.status ?? ""]));
+    const boardItems = Array.isArray(tasks) ? tasks.slice(0, 6) : [];
+    const timelineItems = Array.isArray(taskStream?.items) ? taskStream.items.slice(0, 6) : boardItems;
+    const timelineNextKey = JSON.stringify(
+      timelineItems.map((task) => [task?.id ?? "", task?.title ?? "", task?.eta ?? "", task?.status ?? "", task?.streamState ?? ""])
+    );
+    const boardNextKey = JSON.stringify(boardItems.map((task) => [task?.id ?? "", task?.title ?? "", task?.eta ?? "", task?.status ?? ""]));
     const timelineHost = document.querySelector('[data-module="task-timeline"]');
     const boardHost = document.querySelector('[data-module="task-board"]');
 
-    if (timelineHost && timelineKey !== nextKey) {
-      timelineKey = nextKey;
-      renderTimeline(timelineHost, items);
+    if (timelineHost && timelineKey !== timelineNextKey) {
+      timelineKey = timelineNextKey;
+      renderTimeline(timelineHost, timelineItems);
     }
 
-    if (boardHost && boardKey !== nextKey) {
-      boardKey = nextKey;
-      renderBoard(boardHost, items);
+    if (boardHost && boardKey !== boardNextKey) {
+      boardKey = boardNextKey;
+      renderBoard(boardHost, boardItems);
     }
   }
 

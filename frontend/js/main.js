@@ -1,7 +1,7 @@
 (function bootApp(global) {
   const { fetchAllData } = global.VibeApi;
   const { createState, mergeData } = global.VibeState;
-  const { initAudio, renderAudio, renderStats, renderTasks, renderMusic } = global.VibeRenderers;
+  const { initAudio, renderAudio, renderFiles, renderStats, renderTasks, renderMusic } = global.VibeRenderers;
 
   const state = createState();
   let initialized = false;
@@ -59,7 +59,8 @@
 
   function renderAll() {
     renderStats(state.summary, state.stats);
-    renderTasks(state.tasks);
+    renderTasks(state.tasks, state.taskStream);
+    renderFiles(state.quickAccess);
     renderMusic(state.music);
     renderAudio(state.audio);
   }

@@ -10,6 +10,9 @@ struct ApiPayload {
   Json summary;
   Json stats;
   Json tasks;
+  Json taskStream;
+  Json quickAccess;
+  Json musicSnapshot;
   Json musicQueue;
 };
 

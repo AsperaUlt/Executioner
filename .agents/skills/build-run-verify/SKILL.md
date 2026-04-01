@@ -1,4 +1,7 @@
-# build-run-verify
+---
+name: build-run-verify
+description: Build, run, and verify the local desktop web app. Use when the app needs to be started, rebuilt, or checked after code changes. Do not use for pure UI styling work.
+---
 
 ## Purpose
 Use this skill when changing backend or frontend behavior that must be proven locally on this Windows repo.

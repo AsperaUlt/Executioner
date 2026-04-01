@@ -6,10 +6,11 @@
     return API_BASE;
   }
 
-  async function fetchJson(path) {
+  async function fetchJson(path, options = {}) {
     const response = await fetch(`${getApiBase()}${path}`, {
       method: "GET",
       headers: { Accept: "application/json" },
+      ...options,
     });
 
     if (!response.ok) {
@@ -19,10 +20,11 @@
     return response.json();
   }
 
-  async function fetchApiEnvelope(path) {
+  async function fetchApiEnvelope(path, options = {}) {
     const response = await fetch(`${getApiBase()}${path}`, {
       method: "GET",
       headers: { Accept: "application/json" },
+      ...options,
     });
 
     const rawBody = await response.text();
@@ -58,18 +60,20 @@
   }
 
   async function fetchAllData() {
-    const [summary, stats, tasks, music] = await Promise.all([
+    const [summary, stats, music, taskStream, quickAccess, tasks] = await Promise.all([
       fetchJson("/api/dashboard/summary"),
       fetchJson("/api/stats"),
+      fetchJson("/api/home/music-snapshot"),
+      fetchJson("/api/home/task-stream"),
+      fetchJson("/api/files/quick-access"),
       fetchJson("/api/tasks"),
-      fetchJson("/api/music/queue"),
     ]);
 
-    return { summary, stats, tasks, music };
+    return { summary, stats, taskStream, quickAccess, tasks, music };
   }
 
-  function searchAudio(query) {
-    return fetchApiEnvelope(`/api/audio/search?${buildQuery({ q: query })}`);
+  function searchAudio(query, options = {}) {
+    return fetchApiEnvelope(`/api/audio/search?${buildQuery({ q: query })}`, options);
   }
 
   function fetchAudioTrack(id) {

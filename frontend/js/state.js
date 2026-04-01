@@ -3,7 +3,9 @@
     summary: {
       greeting: null,
       focusScore: null,
+      songsPlayed: null,
       focusMinutes: null,
+      tasksCompleted: null,
       tasksClosed: null,
     },
     stats: {
@@ -12,6 +14,12 @@
       insights: [],
     },
     tasks: [],
+    taskStream: {
+      items: [],
+    },
+    quickAccess: {
+      items: [],
+    },
     music: {
       current: null,
       queue: [],
@@ -44,6 +52,8 @@
       ...payload,
       summary: { ...state.summary, ...payload.summary },
       stats: { ...state.stats, ...payload.stats },
+      taskStream: { ...state.taskStream, ...payload.taskStream },
+      quickAccess: { ...state.quickAccess, ...payload.quickAccess },
       music: { ...state.music, ...payload.music },
     };
   }

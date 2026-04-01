@@ -1,4 +1,7 @@
-# frontend-debug
+---
+name: frontend-debug
+description: Diagnose frontend startup and connectivity issues for the local desktop web app. Use when the page is blank, devtools shows blocked requests, network errors, or the frontend cannot reach the backend.
+---
 
 ## Purpose
 Use this skill when VIBE's frontend loads incorrectly, shows blank content, or hits browser origin/CORS problems.

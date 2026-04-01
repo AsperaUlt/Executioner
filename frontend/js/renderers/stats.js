@@ -156,10 +156,16 @@
   }
 
   function renderStats(summary, stats) {
-    setText("focusMinutes", summary?.focusMinutes ?? "--");
-    setText("focusMinutesTasksView", summary?.focusMinutes ?? "--");
-    setText("tasksClosed", summary?.tasksClosed ?? "--");
-    setText("tasksClosedTasksView", summary?.tasksClosed ?? "--");
+    const focusMinutes = summary?.focusMinutes ?? "--";
+    const tasksCompleted = summary?.tasksCompleted ?? summary?.tasksClosed ?? "--";
+    const songsPlayed = summary?.songsPlayed ?? "--";
+
+    setText("songsPlayed", songsPlayed);
+    setText("focusMinutes", focusMinutes);
+    setText("focusMinutesTasksView", focusMinutes);
+    setText("tasksClosed", tasksCompleted);
+    setText("tasksClosedTasksView", tasksCompleted);
+    setText("tasksCompleted", tasksCompleted);
     setText("focusScore", summary?.focusScore ?? "--");
     setText("greeting", summary?.greeting ?? "Awaiting signal");
     renderTaskEfficiency(stats?.taskEfficiency);

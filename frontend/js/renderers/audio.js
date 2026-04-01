@@ -1,5 +1,7 @@
 (function attachAudioRenderer(global) {
   const { searchAudio, fetchAudioLyric, fetchAudioTrack, fetchAudioUrl } = global.VibeApi;
+  const SEARCH_DEBOUNCE_MS = 300;
+  const MIN_SEARCH_LENGTH = 2;
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -44,6 +46,7 @@
       idle: "border-white/10 bg-white/[0.04] text-slate-300",
       loading: "border-primary/20 bg-primary/10 text-primary",
       results: "border-tertiary/20 bg-tertiary/10 text-tertiary",
+      empty: "border-white/10 bg-white/[0.04] text-slate-300",
       playing: "border-secondary/20 bg-secondary/10 text-secondary",
       error: "border-red-400/20 bg-red-400/10 text-red-200",
     };
@@ -112,10 +115,17 @@
       '[data-field="audioLyrics"]',
       state.lyricText || "Lyrics will appear here. If the upstream service returns no lyric, this area stays readable."
     );
-    setText(
-      '[data-field="audioEmptyState"]',
-      state.isSearching ? "Searching..." : "No results yet. Try a keyword when the music service is ready."
-    );
+
+    const emptyMessage = state.error
+      ? "Search failed. Try again when the music service is ready."
+      : state.query && state.query.length < MIN_SEARCH_LENGTH
+        ? `Enter at least ${MIN_SEARCH_LENGTH} characters to search tracks.`
+        : state.isSearching
+          ? "Searching..."
+          : state.query
+            ? "No results returned by the music service."
+            : "No results yet. Try a keyword when the music service is ready.";
+    setText('[data-field="audioEmptyState"]', emptyMessage);
 
     const errorBox = qs('[data-module="audio-error"]');
     if (errorBox) {
@@ -143,6 +153,10 @@
     return code ? `${message} (${code})` : message;
   }
 
+  function isAbortError(error) {
+    return error?.name === "AbortError";
+  }
+
   function initAudio(state) {
     const form = qs('[data-module="audio-search-form"]');
     const input = qs('[data-module="audio-search-input"]');
@@ -155,49 +169,84 @@
 
     let searchToken = 0;
     let resolveToken = 0;
+    let searchController = null;
+    let lastRequestedQuery = "";
 
-    async function runSearch(query) {
+    async function executeSearch(query) {
       const normalizedQuery = query.trim();
       state.query = normalizedQuery;
 
-      if (!normalizedQuery) {
+      if (!normalizedQuery || normalizedQuery.length < MIN_SEARCH_LENGTH) {
+        if (searchController) {
+          searchController.abort();
+          searchController = null;
+        }
+
         state.status = "idle";
         state.results = [];
         state.error = "";
-        state.message = "Enter a keyword to search tracks.";
+        state.isSearching = false;
+        state.message = normalizedQuery
+          ? `Enter at least ${MIN_SEARCH_LENGTH} characters to search tracks.`
+          : "Enter a keyword to search tracks.";
+        lastRequestedQuery = "";
         renderAudio(state);
         return;
       }
 
+      if (normalizedQuery === lastRequestedQuery) {
+        return;
+      }
+
+      if (searchController) {
+        searchController.abort();
+      }
+
       const token = ++searchToken;
+      const controller = new AbortController();
+      searchController = controller;
+      lastRequestedQuery = normalizedQuery;
       state.status = "loading";
       state.isSearching = true;
       state.error = "";
       state.message = "Searching the music service...";
       renderAudio(state);
+      console.debug("search started", normalizedQuery);
 
       try {
-        const payload = await searchAudio(normalizedQuery);
+        const payload = await searchAudio(normalizedQuery, { signal: controller.signal });
         if (token !== searchToken) {
+          console.debug("search ignored(stale)", normalizedQuery);
           return;
         }
 
         state.results = Array.isArray(payload?.data?.results) ? payload.data.results : [];
-        state.status = state.results.length ? "results" : "idle";
+        state.status = state.results.length ? "results" : "empty";
         state.message = state.results.length
           ? `Found ${state.results.length} track candidates.`
           : "No results returned by the music service.";
+        console.debug("search success", normalizedQuery, state.results.length);
       } catch (error) {
         if (token !== searchToken) {
+          console.debug("search ignored(stale)", normalizedQuery);
+          return;
+        }
+
+        if (isAbortError(error)) {
+          console.debug("search aborted", normalizedQuery);
           return;
         }
 
         state.results = [];
         state.status = "error";
-        state.error = buildUiError(error, "ÒôÀÖ·þÎñÔÝÎ´Æô¶¯£¬ÇëÉÔºóÁªµ÷");
+        state.error = buildUiError(error, "éŸ³ä¹æœåŠ¡æš‚æœªå¯åŠ¨ï¼Œè¯·ç¨åŽè”è°ƒ");
         state.message = "Search request failed.";
+        lastRequestedQuery = "";
       } finally {
         if (token === searchToken) {
+          if (searchController === controller) {
+            searchController = null;
+          }
           state.isSearching = false;
           renderAudio(state);
         }
@@ -205,8 +254,17 @@
     }
 
     const debouncedSearch = debounce((value) => {
-      void runSearch(value);
-    }, 280);
+      void executeSearch(value);
+    }, SEARCH_DEBOUNCE_MS);
+
+    function triggerSearch(query, options = {}) {
+      if (options.immediate) {
+        void executeSearch(query);
+        return;
+      }
+
+      debouncedSearch(query);
+    }
 
     async function resolveTrack(trackId) {
       if (!trackId) {
@@ -271,11 +329,11 @@
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      void runSearch(input.value);
+      triggerSearch(input.value, { immediate: true });
     });
 
     input.addEventListener("input", (event) => {
-      debouncedSearch(event.target.value);
+      triggerSearch(event.target.value);
     });
 
     resultsHost.addEventListener("click", (event) => {

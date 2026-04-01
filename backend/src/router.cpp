@@ -58,6 +58,18 @@ void register_routes(httplib::Server& server) {
     write_json(res, payload.stats);
   });
 
+  server.Get("/api/home/music-snapshot", [payload](const httplib::Request&, httplib::Response& res) {
+    write_json(res, payload.musicSnapshot);
+  });
+
+  server.Get("/api/home/task-stream", [payload](const httplib::Request&, httplib::Response& res) {
+    write_json(res, payload.taskStream);
+  });
+
+  server.Get("/api/files/quick-access", [payload](const httplib::Request&, httplib::Response& res) {
+    write_json(res, payload.quickAccess);
+  });
+
   server.Get("/api/tasks", [payload](const httplib::Request&, httplib::Response& res) {
     write_json(res, payload.tasks);
   });

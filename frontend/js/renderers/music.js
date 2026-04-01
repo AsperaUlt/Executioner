@@ -102,8 +102,10 @@
       return;
     }
 
-    const current = music.current ?? {};
-    const queue = Array.isArray(music.queue) ? music.queue.slice(0, 6) : [];
+    const current = music.currentTrack ?? music.current ?? {};
+    const queueSource = Array.isArray(music.upNext) ? music.upNext : Array.isArray(music.queue) ? music.queue : [];
+    const queue = queueSource.slice(0, 6);
+    const queueDepth = typeof music.queueDepth === "number" ? music.queueDepth : queueSource.length;
 
     setText("trackTitle", current.title ?? "No Track");
     setText("audioHeroTitle", current.title ?? "No Track");
@@ -112,8 +114,8 @@
     setText("audioHeroArtist", current.artist ?? "Offline");
     setText("audioCompactArtist", current.artist ?? "Offline");
     setText("footerTrackArtist", current.artist ?? "Offline");
-    setText("queueCount", queue.length);
-    setText("queueCountAudio", queue.length);
+    setText("queueCount", queueDepth);
+    setText("queueCountAudio", queueDepth);
 
     if (typeof current.progress === "number" && progressKey !== current.progress) {
       progressKey = current.progress;
