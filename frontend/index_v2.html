@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Executioner</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            background: "#0a0d12",
+            surface: "#11151d",
+            primary: "#97f7ff",
+            secondary: "#8d7bff",
+            tertiary: "#38efc9",
+            outline: "#2a3341",
+            muted: "#9ca7b8",
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Inter", "sans-serif"],
+          },
+          boxShadow: {
+            neon: "0 0 24px rgba(151, 247, 255, 0.18)",
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(151, 247, 255, 0.14), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(141, 123, 255, 0.18), transparent 30%),
+        linear-gradient(180deg, #0a0d12 0%, #0d1118 100%);
+      color: #f4f8ff;
+      overflow: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(17, 21, 29, 0.72);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(88, 102, 124, 0.24);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-link.active {
+      color: #97f7ff;
+      background: rgba(151, 247, 255, 0.1);
+      box-shadow: inset 0 0 0 1px rgba(151, 247, 255, 0.16);
+    }
+
+    .route-panel {
+      display: none;
+    }
+
+    .route-panel.active {
+      display: block;
+      animation: panel-fade 240ms ease;
+    }
+
+    .metric-ring {
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: rgba(151, 247, 255, 0.15);
+      border-radius: 999px;
+    }
+
+    .parallax-glow {
+      position: absolute;
+      width: 22rem;
+      height: 22rem;
+      border-radius: 999px;
+      filter: blur(80px);
+      pointer-events: none;
+      opacity: 0.3;
+      will-change: transform;
+    }
+
+    @keyframes panel-fade {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .app-footer {
+      position: fixed;
+      bottom: 1.25rem;
+      left: calc(18rem + 2.5rem);
+      right: 1.5rem;
+      z-index: 20;
+    }
+
+    @media (max-width: 1024px) {
+      body {
+        overflow: auto;
+      }
+
+      .app-footer {
+        position: static;
+        inset: auto;
+        margin-top: 1rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-background text-white">
+  <canvas id="fx-canvas" class="fixed inset-0 z-0 pointer-events-none"></canvas>
+  <div class="parallax-glow bg-primary/50 top-[-7rem] left-[-8rem]" data-parallax></div>
+  <div class="parallax-glow bg-secondary/40 bottom-[-9rem] right-[-7rem]" data-parallax></div>
+
+  <div class="relative z-10 flex min-h-screen flex-col lg:flex-row">
+    <aside class="w-full shrink-0 px-4 py-4 lg:w-72 lg:px-6 lg:py-6">
+      <div class="glass-panel flex h-full flex-col rounded-[2rem] p-5 lg:min-h-[calc(100vh-3rem)] lg:p-6">
+        <div>
+          <p class="font-headline text-2xl font-extrabold tracking-tight text-primary">Executioner</p>
+          <p class="mt-1 text-[11px] uppercase tracking-[0.24em] text-slate-400">The Ethereal Observer</p>
+        </div>
+
+        <nav class="mt-10 flex flex-col gap-2">
+          <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#home" data-route-link="home">
+            <span class="material-symbols-outlined">home</span>
+            <span class="font-headline text-sm font-bold tracking-wide">Home</span>
+          </a>
+          <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#tasks" data-route-link="tasks">
+            <span class="material-symbols-outlined">checklist</span>
+            <span class="font-headline text-sm font-bold tracking-wide">Tasks</span>
+          </a>
+          <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#audio" data-route-link="audio">
+            <span class="material-symbols-outlined">graphic_eq</span>
+            <span class="font-headline text-sm font-bold tracking-wide">Audio</span>
+          </a>
+          <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#insights" data-route-link="insights">
+            <span class="material-symbols-outlined">insights</span>
+            <span class="font-headline text-sm font-bold tracking-wide">Insights</span>
+          </a>
+        </nav>
+
+        <div class="mt-8 rounded-[1.6rem] border border-primary/10 bg-primary/5 p-5">
+          <p class="text-[11px] uppercase tracking-[0.25em] text-primary/80">Live Status</p>
+          <p class="mt-3 font-headline text-lg font-bold">Backend Link</p>
+          <p class="mt-2 text-sm text-slate-300" data-field="apiStatus">Idle</p>
+          <button class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" data-action="refresh" type="button">
+            <span class="material-symbols-outlined text-lg">autorenew</span>
+            <span>Refresh Data</span>
+          </button>
+        </div>
+
+        <div class="mt-auto rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5">
+          <p class="text-[11px] uppercase tracking-[0.24em] text-slate-400">Focus Score</p>
+          <div class="mt-3 flex items-end justify-between gap-4">
+            <div>
+              <p class="font-headline text-4xl font-extrabold text-primary" data-field="focusScore">--</p>
+              <p class="mt-1 text-xs text-slate-400">Current operator state</p>
+            </div>
+            <div class="rounded-2xl border border-secondary/20 bg-secondary/10 px-3 py-2 text-xs text-secondary">
+              <span data-field="greeting">Awaiting signal</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="flex min-h-screen flex-1 flex-col px-4 pb-4 pt-0 lg:pr-6 lg:pt-6">
+      <header class="glass-panel flex h-20 items-center justify-between rounded-[2rem] px-5 lg:px-8">
+        <div>
+          <p class="text-[11px] uppercase tracking-[0.28em] text-primary/80">Control Surface</p>
+          <h1 class="font-headline text-2xl font-extrabold tracking-tight">Unified Mission Console</h1>
+        </div>
+        <div class="flex items-center gap-3 rounded-full border border-white/5 bg-white/[0.03] px-4 py-2">
+          <span class="material-symbols-outlined text-slate-400">sensors</span>
+          <span class="text-sm text-slate-300">127.0.0.1:18080</span>
+        </div>
+      </header>
+
+      <main class="scrollbar-thin relative mt-4 flex-1 overflow-visible lg:overflow-y-auto pb-12 lg:pb-40 pr-1">
+        <section class="route-panel active" data-route-panel="home">
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div class="glass-panel col-span-1 overflow-hidden rounded-[2.2rem] p-7 xl:col-span-8">
+              <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-2xl">
+                  <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Dashboard Core</p>
+                  <h2 class="mt-4 font-headline text-4xl font-extrabold tracking-tight lg:text-5xl">One shell, live data, no page swaps.</h2>
+                  <p class="mt-4 max-w-xl text-sm leading-7 text-slate-300">Home 聚合当前会话状态、任务完成情况与音频上下文。所有模块通过单页切换保留在同一渲染树中，避免旧版重复初始化造成的卡顿�?/p>
+                </div>
+                <div class="grid min-w-[18rem] grid-cols-2 gap-4">
+                  <div class="rounded-[1.6rem] bg-white/[0.04] p-4">
+                    <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Focus Minutes</p>
+                    <p class="mt-3 font-headline text-4xl font-extrabold text-primary" data-field="focusMinutes">--</p>
+                  </div>
+                  <div class="rounded-[1.6rem] bg-white/[0.04] p-4">
+                    <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Tasks Closed</p>
+                    <p class="mt-3 font-headline text-4xl font-extrabold text-secondary" data-field="tasksClosed">--</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-10 grid gap-4 md:grid-cols-3">
+                <article class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                  <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Current Track</p>
+                  <p class="mt-3 font-headline text-xl font-bold" data-field="trackTitle">No Track</p>
+                  <p class="mt-1 text-sm text-slate-400" data-field="trackArtist">Offline</p>
+                </article>
+                <article class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                  <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Task Efficiency</p>
+                  <p class="mt-3 font-headline text-xl font-bold text-primary" data-field="taskEfficiency">--</p>
+                  <p class="mt-1 text-sm text-slate-400">Bound to `/api/stats`</p>
+                </article>
+                <article class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                  <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Queue Depth</p>
+                  <p class="mt-3 font-headline text-xl font-bold text-tertiary" data-field="queueCount">--</p>
+                  <p class="mt-1 text-sm text-slate-400">Bound to `/api/music/queue`</p>
+                </article>
+              </div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Audio Snapshot</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Next in queue</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">queue_music</span>
+              </div>
+              <div class="mt-6 space-y-3" data-module="home-queue"></div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Task Stream</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Immediate execution timeline</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">timeline</span>
+              </div>
+              <div class="mt-6 grid gap-3" data-module="task-timeline"></div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Field Notes</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Live insights</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">psychology</span>
+              </div>
+              <div class="mt-6 space-y-3" data-module="flow-insights"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="route-panel" data-route-panel="tasks">
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-8">
+              <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Task Command</p>
+              <h2 class="mt-3 font-headline text-4xl font-extrabold tracking-tight">Operational queue routed from the backend.</h2>
+              <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300">旧版任务模块的请求和渲染逻辑已经收束到这里。点击侧边栏只切换面板，不会重复刷新整页，也不会重新创建动画对象�?/p>
+              <div class="mt-8 grid gap-4 md:grid-cols-2">
+                <div class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                  <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Tasks Closed</p>
+                  <p class="mt-3 font-headline text-4xl font-extrabold text-primary" data-field="tasksClosedTasksView">--</p>
+                </div>
+                <div class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                  <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Focus Minutes</p>
+                  <p class="mt-3 font-headline text-4xl font-extrabold text-secondary" data-field="focusMinutesTasksView">--</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4">
+              <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Dispatch Rules</p>
+              <div class="mt-5 space-y-3 text-sm text-slate-300">
+                <p class="rounded-2xl border border-white/5 bg-white/[0.03] p-4">`done` 显示为已完成高亮状态�?/p>
+                <p class="rounded-2xl border border-white/5 bg-white/[0.03] p-4">`in_progress` 显示为执行中状态�?/p>
+                <p class="rounded-2xl border border-white/5 bg-white/[0.03] p-4">其余状态统一回落为待处理�?/p>
+              </div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Execution Board</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Backend-driven task cards</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">task_alt</span>
+              </div>
+              <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-module="task-board"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="route-panel" data-route-panel="audio">
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div class="glass-panel col-span-1 overflow-hidden rounded-[2.4rem] p-8 xl:col-span-8">
+              <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Audio Core</p>
+              <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <h2 class="font-headline text-4xl font-extrabold tracking-tight">Offline-first Audio MVP with resilient failures.</h2>
+                <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" data-module="audio-status-badge">idle</span>
+              </div>
+              <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300" data-field="audioSearchMessage">Search for a track to start the Audio MVP.</p>
+              <form class="mt-8 flex flex-col gap-3 md:flex-row" data-module="audio-search-form">
+                <input class="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-white/[0.06]" data-module="audio-search-input" placeholder="Search songs, artists, or albums" type="search" />
+                <button class="rounded-2xl bg-primary px-6 py-4 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Search</button>
+              </form>
+              <div class="mt-6 rounded-[1.6rem] border border-red-400/15 bg-red-400/10 px-4 py-3 text-sm text-red-100" data-module="audio-error" hidden></div>
+              <div class="mt-4 rounded-[1.6rem] border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-primary" data-module="audio-loading" hidden></div>
+              <div class="mt-6 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5" data-module="audio-empty">
+                <p class="text-sm text-slate-300" data-field="audioEmptyState">No results yet. Try a keyword when the music service is ready.</p>
+              </div>
+              <div class="mt-6 space-y-3" data-module="audio-results" hidden></div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-4">
+              <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Current Signal</p>
+              <div class="mt-6 rounded-[1.8rem] border border-primary/10 bg-primary/5 p-5">
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Now Playing</p>
+                <p class="mt-3 font-headline text-2xl font-bold text-primary" data-field="audioCurrentTitle">No track selected</p>
+                <p class="mt-2 text-sm text-slate-300" data-field="audioCurrentArtist">Waiting for search</p>
+                <p class="mt-1 text-xs uppercase tracking-[0.22em] text-slate-400" data-field="audioCurrentAlbum">No album metadata</p>
+              </div>
+              <div class="mt-5 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5">
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Playback</p>
+                <audio class="mt-4 w-full" data-module="audio-player" controls preload="none"></audio>
+              </div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Lyrics</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Static lyric panel</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">lyrics</span>
+              </div>
+              <pre class="mt-6 whitespace-pre-wrap break-words rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5 font-body text-sm leading-7 text-slate-300" data-field="audioLyrics">Lyrics will appear here. If the upstream service returns no lyric, this area stays readable.</pre>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Fallback Queue</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Existing local queue data</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">queue_music</span>
+              </div>
+              <div class="mt-6 grid gap-4 md:grid-cols-2" data-module="music-queue"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="route-panel" data-route-panel="insights">
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Stats Lens</p>
+                  <h2 class="mt-3 font-headline text-4xl font-extrabold tracking-tight">Insight rendering now targets the new DOM.</h2>
+                </div>
+                <div class="relative h-28 w-28">
+                  <svg class="h-full w-full" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"></circle>
+                    <circle class="metric-ring" cx="100" cy="100" r="80" fill="none" stroke="#97f7ff" stroke-dasharray="502" stroke-dashoffset="502" stroke-linecap="round" stroke-width="12" data-field="taskEfficiencyRing"></circle>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-xs uppercase tracking-[0.22em] text-slate-400">Efficiency</span>
+                    <span class="mt-1 font-headline text-2xl font-extrabold text-primary" data-field="taskEfficiencyInsights">--</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-8 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-6">
+                <div class="mb-4 flex items-center justify-between">
+                  <p class="font-headline text-xl font-bold">Deep Work Trend</p>
+                  <span class="text-sm text-slate-400">7 data points</span>
+                </div>
+                <svg class="h-64 w-full" viewBox="0 0 800 220" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="rgba(151, 247, 255, 0.35)"></stop>
+                      <stop offset="100%" stop-color="rgba(151, 247, 255, 0)"></stop>
+                    </linearGradient>
+                  </defs>
+                  <path d="" fill="url(#lineFill)" data-field="deepWorkArea"></path>
+                  <path d="" fill="none" stroke="#97f7ff" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" data-field="deepWorkLine"></path>
+                </svg>
+              </div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5">
+              <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Highlights</p>
+              <div class="mt-6 space-y-3" data-module="flow-insights-secondary"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer pointer-events-none">
+        <div class="glass-panel pointer-events-auto flex items-center gap-4 rounded-[1.8rem] px-5 py-4">
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-headline text-lg font-bold" data-field="footerTrackTitle">No Track</p>
+            <p class="truncate text-sm text-slate-400" data-field="footerTrackArtist">Offline</p>
+          </div>
+          <div class="flex min-w-[12rem] flex-1 items-center gap-4">
+            <span class="material-symbols-outlined text-slate-500">skip_previous</span>
+            <button class="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-slate-950 shadow-neon transition hover:brightness-110" type="button">
+              <span class="material-symbols-outlined">pause</span>
+            </button>
+            <span class="material-symbols-outlined text-slate-500">skip_next</span>
+            <div class="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+              <div class="h-full rounded-full bg-primary transition-[width] duration-300" data-field="footerTrackProgress"></div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/state.js"></script>
+  <script src="/js/renderers/stats.js"></script>
+  <script src="/js/renderers/tasks.js"></script>
+  <script src="/js/renderers/music.js"></script>
+  <script src="/js/renderers/audio.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>
