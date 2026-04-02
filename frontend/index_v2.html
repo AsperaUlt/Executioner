@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Executioner</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -47,7 +48,17 @@
         radial-gradient(circle at bottom right, rgba(141, 123, 255, 0.18), transparent 30%),
         linear-gradient(180deg, #0a0d12 0%, #0d1118 100%);
       color: #f4f8ff;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: clip;
+      overflow-y: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    body::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
 
     .glass-panel {
@@ -65,6 +76,7 @@
 
     .route-panel {
       display: none;
+      min-height: 100%;
     }
 
     .route-panel.active {
@@ -85,6 +97,65 @@
     .scrollbar-thin::-webkit-scrollbar-thumb {
       background: rgba(151, 247, 255, 0.15);
       border-radius: 999px;
+    }
+
+    .scrollbar-hidden {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .scrollbar-hidden::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
+
+    [data-scroll-shell] {
+      min-height: 0;
+    }
+
+    [data-scroll-viewport] {
+      min-height: 0;
+      overflow: visible;
+      scroll-padding-top: 1.5rem;
+      scroll-padding-bottom: 2rem;
+    }
+
+    [data-module="music-suggestions-panel"] {
+      overflow: hidden;
+      transform-origin: top center;
+      will-change: transform, opacity;
+    }
+
+    [data-module="music-suggestions"] {
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    [data-module="music-results"] {
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    [data-motion="glass-card"] {
+      will-change: transform, opacity;
+    }
+
+    [data-motion="music-card"] {
+      will-change: transform, opacity, filter;
+      transform-origin: center center;
+    }
+
+    [data-module="music-grid"] {
+      align-items: start;
+    }
+
+    [data-module="music-side-stack"] {
+      align-self: start;
+    }
+
+    [data-module="music-results"] {
+      min-height: 0;
     }
 
     .parallax-glow {
@@ -119,13 +190,19 @@
 
     @media (max-width: 1024px) {
       body {
-        overflow: auto;
+        overflow-y: auto;
       }
 
       .app-footer {
         position: static;
         inset: auto;
         margin-top: 1rem;
+      }
+
+      [data-scroll-viewport] {
+        overflow: visible;
+        scroll-padding-top: 1rem;
+        scroll-padding-bottom: 1.5rem;
       }
     }
   </style>
@@ -152,9 +229,9 @@
             <span class="material-symbols-outlined">checklist</span>
             <span class="font-headline text-sm font-bold tracking-wide">Tasks</span>
           </a>
-          <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#audio" data-route-link="audio">
+          <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#music" data-route-link="music">
             <span class="material-symbols-outlined">graphic_eq</span>
-            <span class="font-headline text-sm font-bold tracking-wide">Audio</span>
+            <span class="font-headline text-sm font-bold tracking-wide">Music</span>
           </a>
           <a class="nav-link flex items-center gap-4 rounded-2xl px-4 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white" href="#insights" data-route-link="insights">
             <span class="material-symbols-outlined">insights</span>
@@ -187,7 +264,7 @@
       </div>
     </aside>
 
-    <div class="flex min-h-screen flex-1 flex-col px-4 pb-4 pt-0 lg:pr-6 lg:pt-6">
+    <div class="flex min-h-screen min-h-0 flex-1 flex-col px-4 pb-4 pt-0 lg:pr-6 lg:pt-6">
       <header class="glass-panel flex h-20 items-center justify-between rounded-[2rem] px-5 lg:px-8">
         <div>
           <p class="text-[11px] uppercase tracking-[0.28em] text-primary/80">Control Surface</p>
@@ -199,10 +276,10 @@
         </div>
       </header>
 
-      <main class="scrollbar-thin relative mt-4 flex-1 overflow-visible lg:overflow-y-auto pb-12 lg:pb-40 pr-1">
+      <main class="scrollbar-hidden relative mt-4 flex-1 min-h-0 overflow-x-clip overflow-y-visible pb-12 pr-1 lg:pb-40 lg:overflow-y-visible" data-scroll-shell data-scroll-viewport>
         <section class="route-panel active" data-route-panel="home">
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 overflow-hidden rounded-[2.2rem] p-7 xl:col-span-8">
+            <div class="glass-panel col-span-1 overflow-hidden rounded-[2.2rem] p-7 xl:col-span-8" data-motion="glass-card">
               <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-2xl">
                   <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Dashboard Core</p>
@@ -245,10 +322,10 @@
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Audio Snapshot</p>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Music Snapshot</p>
                   <h3 class="mt-2 font-headline text-2xl font-bold">Next in queue</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">queue_music</span>
@@ -256,7 +333,7 @@
               <div class="mt-6 space-y-3" data-module="home-queue"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Task Stream</p>
@@ -267,7 +344,7 @@
               <div class="mt-6 grid gap-3" data-module="task-timeline"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Field Notes</p>
@@ -282,7 +359,7 @@
 
         <section class="route-panel" data-route-panel="tasks">
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-8">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-8" data-motion="glass-card">
               <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Task Command</p>
               <h2 class="mt-3 font-headline text-4xl font-extrabold tracking-tight">Create tasks, drive the queue, keep the flow visible.</h2>
               <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300">任务模块保持现有后端驱动模式。切换侧栏只切换面板，不刷新页面，也不会重复初始化整页效果。</p>
@@ -303,7 +380,7 @@
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4" data-motion="glass-card">
               <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Execution Rules</p>
               <div class="mt-5 space-y-3 text-sm text-slate-300">
                 <p class="rounded-2xl border border-white/5 bg-white/[0.03] p-4">`done` 显示为已完成高亮状态。</p>
@@ -312,7 +389,7 @@
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-6">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-6" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Current</p>
@@ -323,7 +400,7 @@
               <div class="mt-6" data-module="task-current"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-6">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-6" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Next</p>
@@ -334,7 +411,7 @@
               <div class="mt-6" data-module="task-next"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Execution Board</p>
@@ -345,7 +422,7 @@
               <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-module="task-board"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Completed</p>
@@ -358,54 +435,107 @@
           </div>
         </section>
 
-        <section class="route-panel" data-route-panel="audio">
-          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 overflow-hidden rounded-[2.4rem] p-8 xl:col-span-8">
-              <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Audio Core</p>
+        <section class="route-panel" data-route-panel="music">
+          <div class="grid grid-cols-1 gap-6 pb-4 xl:grid-cols-12" data-module="music-grid">
+            <div class="glass-panel col-span-1 overflow-visible rounded-[2.4rem] p-8 xl:col-span-7" data-module="music-search-shell" data-motion="music-card">
+              <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Music Atlas</p>
               <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <h2 class="font-headline text-4xl font-extrabold tracking-tight">Offline-first Audio MVP with resilient failures.</h2>
-                <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" data-module="audio-status-badge">idle</span>
+                <h2 class="font-headline text-4xl font-extrabold tracking-tight">One music surface for discovery, queue context, and playback.</h2>
+                <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" data-module="music-status-badge">idle</span>
               </div>
-              <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300" data-field="audioSearchMessage">Search for a track to start the Audio MVP.</p>
-              <form class="mt-8 flex flex-col gap-3 md:flex-row" data-module="audio-search-form">
-                <input class="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-white/[0.06]" data-module="audio-search-input" placeholder="Search songs, artists, or albums" type="search" />
-                <button class="rounded-2xl bg-primary px-6 py-4 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Search</button>
+              <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300" data-field="musicSearchMessage">Search for a track to open the Music workspace.</p>
+              <form class="mt-8 flex flex-col gap-3 md:flex-row md:items-start" data-module="music-search-form">
+                <div class="relative min-w-0 flex-1">
+                  <label class="sr-only" for="music-search-input">Search songs, artists, or albums</label>
+                  <input aria-autocomplete="list" aria-controls="music-suggestions-panel" aria-expanded="false" autocomplete="off" class="min-w-0 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-white/[0.06] focus:shadow-[0_0_0_1px_rgba(151,247,255,0.12)]" data-module="music-search-input" id="music-search-input" placeholder="Search songs, artists, or albums" type="search" />
+                  <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                    <span data-module="music-search-hint">Discover</span>
+                  </div>
+                  <div class="relative z-20 mt-3 rounded-[1.8rem] border border-white/10 bg-slate-950/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-2xl" data-module="music-suggestions-panel" id="music-suggestions-panel" hidden>
+                    <div class="px-3 pb-2 pt-1">
+                      <p class="text-[11px] uppercase tracking-[0.22em] text-primary/80" data-field="musicSuggestionLabel">Top matches</p>
+                    </div>
+                    <div class="scrollbar-hidden max-h-[22rem] space-y-2 overflow-y-auto pr-1" data-module="music-suggestions"></div>
+                  </div>
+                </div>
+                <button class="rounded-2xl bg-primary px-6 py-4 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Open Music</button>
               </form>
-              <div class="mt-3 space-y-2" data-module="audio-suggestions" hidden></div>
-              <div class="mt-6 rounded-[1.6rem] border border-red-400/15 bg-red-400/10 px-4 py-3 text-sm text-red-100" data-module="audio-error" hidden></div>
-              <div class="mt-4 rounded-[1.6rem] border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-primary" data-module="audio-loading" hidden></div>
-              <div class="mt-6 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5" data-module="audio-empty">
-                <p class="text-sm text-slate-300" data-field="audioEmptyState">No results yet. Try a keyword when the music service is ready.</p>
+              <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Suggestions arrive first. Press Enter to commit the full result list.</p>
+              <div class="mt-6 rounded-[1.6rem] border border-red-400/15 bg-red-400/10 px-4 py-3 text-sm text-red-100" data-module="music-error" hidden></div>
+              <div class="mt-4 rounded-[1.6rem] border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-primary" data-module="music-loading" hidden></div>
+              <div class="mt-6 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5" data-module="music-empty">
+                <p class="text-sm text-slate-300" data-field="musicEmptyState">No results yet. Try a keyword when the music service is ready.</p>
               </div>
-              <div class="scrollbar-thin mt-6 max-h-[32rem] space-y-3 overflow-y-auto pr-2" data-module="audio-results" hidden></div>
+              <div class="scrollbar-hidden mt-6 max-h-[min(34rem,52vh)] space-y-3 overflow-y-auto pr-2 xl:max-h-[min(38rem,56vh)]" data-module="music-results" hidden></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-4">
-              <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Current Signal</p>
-              <div class="mt-6 rounded-[1.8rem] border border-primary/10 bg-primary/5 p-5">
-                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Now Playing</p>
-                <p class="mt-3 font-headline text-2xl font-bold text-primary" data-field="audioCurrentTitle">No track selected</p>
-                <p class="mt-2 text-sm text-slate-300" data-field="audioCurrentArtist">Waiting for search</p>
-                <p class="mt-1 text-xs uppercase tracking-[0.22em] text-slate-400" data-field="audioCurrentAlbum">No album metadata</p>
+            <div class="col-span-1 grid gap-6 xl:col-span-5" data-module="music-side-stack">
+              <div class="glass-panel rounded-[2.4rem] p-8" data-motion="music-card">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Search Snapshot</p>
+                    <h3 class="mt-2 font-headline text-2xl font-bold">Current query state</h3>
+                  </div>
+                  <span class="material-symbols-outlined text-primary">manage_search</span>
+                </div>
+                <div class="mt-6 grid gap-4 sm:grid-cols-2">
+                  <div class="rounded-[1.6rem] border border-primary/10 bg-primary/5 p-5">
+                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Committed Query</p>
+                    <p class="mt-3 font-headline text-2xl font-bold text-primary" data-field="musicCurrentArtist">Waiting for search</p>
+                    <p class="mt-2 text-xs uppercase tracking-[0.22em] text-slate-500">Search state</p>
+                  </div>
+                  <div class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Result Snapshot</p>
+                    <p class="mt-3 font-headline text-2xl font-bold text-white" data-field="musicCurrentTitle">No search results</p>
+                    <p class="mt-2 text-xs uppercase tracking-[0.22em] text-slate-500" data-field="musicCurrentAlbum">No album metadata</p>
+                  </div>
+                </div>
               </div>
-              <div class="mt-5 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5">
+
+              <div class="glass-panel rounded-[2.4rem] p-8" data-motion="music-card">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Daily Playlist</p>
+                    <h3 class="mt-2 font-headline text-2xl font-bold">Reserved for daily mix</h3>
+                  </div>
+                  <span class="material-symbols-outlined text-tertiary">library_music</span>
+                </div>
+                <div class="mt-6 rounded-[1.8rem] border border-tertiary/15 bg-tertiary/5 p-5">
+                  <p class="text-sm leading-7 text-slate-300">This area is intentionally left for the upcoming daily playlist endpoint so the search summary and result list no longer compete for the same space.</p>
+                  <div class="mt-5 flex flex-wrap gap-3">
+                    <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">Future endpoint</span>
+                    <span class="rounded-full border border-tertiary/20 bg-tertiary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-tertiary">Daily mix slot</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-5" data-motion="music-card">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Playback</p>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Listening surface</h3>
+                </div>
+                <span class="material-symbols-outlined text-primary">play_circle</span>
+              </div>
+              <div class="mt-6 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5">
                 <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Playback</p>
-                <audio class="mt-4 w-full" data-module="audio-player" controls preload="none"></audio>
+                <audio class="mt-4 w-full" data-module="music-player" controls preload="none"></audio>
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-6">
+            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-7" data-motion="music-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Lyrics</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Static lyric panel</h3>
+                  <h3 class="mt-2 font-headline text-2xl font-bold">Readable metadata layer</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">lyrics</span>
               </div>
-              <pre class="mt-6 whitespace-pre-wrap break-words rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5 font-body text-sm leading-7 text-slate-300" data-field="audioLyrics">Lyrics will appear here. If the upstream service returns no lyric, this area stays readable.</pre>
+              <pre class="mt-6 whitespace-pre-wrap break-words rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5 font-body text-sm leading-7 text-slate-300" data-field="musicLyrics">Lyrics will appear here. If the upstream service returns no lyric, this area stays readable.</pre>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-6">
+            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-12" data-motion="music-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Fallback Queue</p>
@@ -413,14 +543,14 @@
                 </div>
                 <span class="material-symbols-outlined text-primary">queue_music</span>
               </div>
-              <div class="mt-6 grid gap-4 md:grid-cols-2" data-module="music-queue"></div>
+              <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-module="music-queue"></div>
             </div>
           </div>
         </section>
 
         <section class="route-panel" data-route-panel="insights">
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Stats Lens</p>
@@ -455,7 +585,7 @@
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5">
+            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5" data-motion="glass-card">
               <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Highlights</p>
               <div class="mt-6 space-y-3" data-module="flow-insights-secondary"></div>
             </div>
@@ -490,7 +620,6 @@
   <script src="/js/renderers/tasks.js"></script>
   <script src="/js/renderers/files.js"></script>
   <script src="/js/renderers/music.js"></script>
-  <script src="/js/renderers/audio.js"></script>
   <script src="/js/main.js"></script>
 </body>
 </html>

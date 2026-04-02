@@ -130,7 +130,7 @@ MusicService::MusicService()
     : upstreamBaseUrl_(config::kMusicUpstreamBaseUrl), timeoutMs_(config::kMusicUpstreamTimeoutMs) {}
 
 MusicServiceResult MusicService::health() const {
-  const auto upstream = request_json("/api/music/health", "/api/music/health");
+  const auto upstream = request_json("/api/music/health", "/inner/version");
   if (!upstream.ok) {
     return upstream;
   }
@@ -248,9 +248,13 @@ MusicServiceResult MusicService::make_error(int httpStatus,
 }
 
 Json MusicService::normalize_health_payload(const Json& upstream) {
+  const Json data = json_object_or_empty(upstream, "data");
+  const std::string version = data.value("version", "");
+
   return {
-      {"status", upstream.value("status", upstream.value("ok", false) ? "ok" : "error")},
+      {"status", upstream.value("status", version.empty() ? (upstream.value("ok", false) ? "ok" : "error") : "ok")},
       {"service", upstream.value("service", "node_music_service")},
+      {"version", version},
       {"managedByHost", upstream.value("managedByHost", false)},
   };
 }

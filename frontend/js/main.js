@@ -1,7 +1,7 @@
 (function bootApp(global) {
   const { fetchAllData } = global.VibeApi;
   const { createState, mergeData } = global.VibeState;
-  const { initAudio, initTasks, renderAudio, renderFiles, renderStats, renderTasks, renderMusic } = global.VibeRenderers;
+  const { initMusicBrowser, initTasks, renderFiles, renderMusic, renderMusicBrowser, renderStats, renderTasks } = global.VibeRenderers;
 
   const state = createState();
   let initialized = false;
@@ -62,7 +62,56 @@
     renderTasks(state);
     renderFiles(state.quickAccess);
     renderMusic(state.music);
-    renderAudio(state.audio);
+    renderMusicBrowser(state.musicBrowser);
+  }
+
+  function prefersReducedMotion() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function animateRoutePanel(route) {
+    const panel = document.querySelector(`[data-route-panel="${route}"]`);
+    const gsap = window.gsap;
+    if (!panel) {
+      return;
+    }
+
+    const cards = panel.querySelectorAll(route === "music" ? '[data-motion="music-card"]' : '[data-motion="glass-card"]');
+    if (!cards.length || !gsap || prefersReducedMotion()) {
+      cards.forEach((card) => {
+        card.style.opacity = "1";
+        card.style.transform = "";
+      });
+      return;
+    }
+
+    gsap.killTweensOf(cards);
+    const isDesktop = window.matchMedia("(min-width: 1280px)").matches;
+    const isMusicRoute = route === "music";
+
+    gsap.fromTo(
+      cards,
+      {
+        autoAlpha: 0,
+        y: isMusicRoute ? (isDesktop ? 24 : 14) : isDesktop ? 34 : 18,
+        x: isMusicRoute ? 0 : isDesktop ? 8 : 0,
+        scale: isMusicRoute ? 0.975 : 1,
+        rotate: isMusicRoute ? (isDesktop ? -0.35 : -0.15) : 0,
+        filter: isMusicRoute ? "blur(10px)" : "blur(0px)",
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        x: 0,
+        scale: 1,
+        rotate: 0,
+        filter: "blur(0px)",
+        duration: isMusicRoute ? (isDesktop ? 0.9 : 0.62) : isDesktop ? 0.72 : 0.48,
+        ease: isMusicRoute ? "back.out(1.05)" : "power3.out",
+        stagger: isMusicRoute ? (isDesktop ? 0.07 : 0.045) : isDesktop ? 0.08 : 0.05,
+        clearProps: "transform,opacity,visibility,filter",
+      }
+    );
   }
 
   async function loadAndRender() {
@@ -109,10 +158,16 @@
     if (window.location.hash !== `#${route}`) {
       history.replaceState(null, "", `#${route}`);
     }
+
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    }
+
+    animateRoutePanel(route);
   }
 
   function bindNavigation() {
-    const validRoutes = new Set(["home", "tasks", "audio", "insights"]);
+    const validRoutes = new Set(["home", "tasks", "music", "insights"]);
     document.querySelectorAll("[data-route-link]").forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
@@ -121,10 +176,12 @@
     });
 
     const hashRoute = window.location.hash.replace("#", "");
-    switchRoute(validRoutes.has(hashRoute) ? hashRoute : "home");
+    const initialRoute = hashRoute === "audio" ? "music" : hashRoute;
+    switchRoute(validRoutes.has(initialRoute) ? initialRoute : "home");
 
     window.addEventListener("hashchange", () => {
-      const nextRoute = window.location.hash.replace("#", "");
+      const hashValue = window.location.hash.replace("#", "");
+      const nextRoute = hashValue === "audio" ? "music" : hashValue;
       if (validRoutes.has(nextRoute) && nextRoute !== activeRoute) {
         switchRoute(nextRoute);
       }
@@ -243,7 +300,7 @@
     initialized = true;
     bindNavigation();
     bindUiActions();
-    initAudio(state.audio);
+    initMusicBrowser(state.musicBrowser);
     initTasks(state, loadAndRender);
     initBackgroundFx();
     void loadAndRender();

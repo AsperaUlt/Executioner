@@ -190,11 +190,6 @@ void add_common_headers(httplib::Response& res) {
   res.set_header("Cache-Control", "no-store");
 }
 
-void add_legacy_alias_headers(httplib::Response& res, const char* replacement) {
-  res.set_header("X-Vibe-Deprecated", "true");
-  res.set_header("X-Vibe-Replacement", replacement);
-}
-
 void write_json(httplib::Response& res, const Json& body, int status = 200) {
   add_common_headers(res);
   res.status = status;
@@ -342,11 +337,6 @@ void register_routes(httplib::Server& server) {
   };
 
   server.Get("/api/music/search", handle_music_search);
-
-  server.Get("/api/audio/search", [handle_music_search](const httplib::Request& req, httplib::Response& res) {
-    add_legacy_alias_headers(res, "/api/music/search");
-    handle_music_search(req, res);
-  });
 }
 
 }  // namespace vibe
