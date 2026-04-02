@@ -1,4 +1,6 @@
 (function attachTaskRenderer(global) {
+  const { completeTask, createTask } = global.VibeApi;
+
   function streamMeta(state) {
     switch (state) {
       case "current":
@@ -59,8 +61,25 @@
     }
   }
 
+  function qs(selector) {
+    return document.querySelector(selector);
+  }
+
+  function setText(selector, value) {
+    const node = qs(selector);
+    if (node) {
+      node.textContent = value;
+    }
+  }
+
   let timelineKey = "";
   let boardKey = "";
+  let completedKey = "";
+  let currentKey = "";
+  let nextKey = "";
+  let taskFormBound = false;
+  let taskActionBound = false;
+  let taskPending = false;
 
   function renderTimeline(host, items) {
     while (host.children.length > items.length) {
@@ -146,23 +165,135 @@
       badge.textContent = meta.label;
       badge.className = `rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${meta.badgeClass}`;
       title.textContent = task?.title ?? "Untitled Task";
-      eta.textContent = `ETA ${task?.eta ?? "--:--"} · ID ${task?.id ?? "n/a"}`;
+      eta.textContent = `ETA ${task?.eta ?? "--:--"} | ID ${task?.id ?? "n/a"}`;
     });
   }
 
-  function renderTasks(tasks, taskStream) {
-    if (!Array.isArray(tasks) && !Array.isArray(taskStream?.items)) {
+  function renderFocusCard(host, task, options = {}) {
+    if (!host) {
       return;
     }
 
-    const boardItems = Array.isArray(tasks) ? tasks.slice(0, 6) : [];
-    const timelineItems = Array.isArray(taskStream?.items) ? taskStream.items.slice(0, 6) : boardItems;
+    const {
+      accentClass = "border-primary/10 bg-primary/5",
+      emptyMessage = "No task assigned.",
+      heading = "Task",
+      actionLabel = "",
+      actionName = "",
+      muted = false,
+    } = options;
+
+    if (!host.dataset.ready) {
+      host.className = `rounded-[1.8rem] border p-5 ${accentClass}`;
+
+      const label = document.createElement("p");
+      label.className = "text-[11px] uppercase tracking-[0.22em] text-slate-400";
+
+      const title = document.createElement("h4");
+      title.className = "mt-3 font-headline text-2xl font-bold";
+
+      const meta = document.createElement("p");
+      meta.className = "mt-2 text-sm text-slate-300";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className =
+        "mt-5 rounded-2xl bg-primary px-4 py-3 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50";
+      button.hidden = true;
+
+      host.append(label, title, meta, button);
+      host.dataset.ready = "true";
+    }
+
+    host.className = `rounded-[1.8rem] border p-5 ${accentClass} ${muted ? "opacity-70" : ""}`;
+    host.children[0].textContent = heading;
+    host.children[1].textContent = task?.title ?? emptyMessage;
+    host.children[2].textContent = task ? `ETA ${task?.eta ?? "--:--"} | ${task?.id ?? "n/a"}` : "Waiting for task updates.";
+
+    const button = host.children[3];
+    if (task && actionLabel && actionName) {
+      button.hidden = false;
+      button.textContent = actionLabel;
+      button.dataset.action = actionName;
+      button.dataset.taskId = task.id ?? "";
+      button.disabled = taskPending;
+    } else {
+      button.hidden = true;
+      button.textContent = "";
+      button.dataset.action = "";
+      button.dataset.taskId = "";
+    }
+  }
+
+  function renderCompleted(host, items) {
+    if (!host) {
+      return;
+    }
+
+    while (host.children.length > items.length) {
+      host.removeChild(host.lastElementChild);
+    }
+
+    items.forEach((task, idx) => {
+      let row = host.children[idx];
+      if (!row) {
+        row = document.createElement("article");
+        row.className = "rounded-[1.4rem] border border-white/5 bg-white/[0.02] p-4 opacity-60";
+
+        const title = document.createElement("p");
+        title.className = "text-sm font-semibold text-slate-300";
+
+        const meta = document.createElement("p");
+        meta.className = "mt-2 text-xs text-slate-500";
+
+        row.append(title, meta);
+        host.appendChild(row);
+      }
+
+      row.children[0].textContent = task?.title ?? "Completed Task";
+      row.children[1].textContent = `ETA ${task?.eta ?? "--:--"} | ${task?.id ?? "n/a"}`;
+    });
+  }
+
+  function renderTaskFeedback(taskUi) {
+    const node = qs('[data-module="task-feedback"]');
+    if (!node) {
+      return;
+    }
+
+    const hasError = Boolean(taskUi?.error);
+    const message = hasError ? taskUi.error : taskUi?.message || "Create a task to update the execution queue.";
+
+    node.className =
+      "mt-4 rounded-[1.4rem] border px-4 py-3 text-sm " +
+      (hasError
+        ? "border-red-400/20 bg-red-400/10 text-red-100"
+        : taskUi?.status === "success"
+          ? "border-tertiary/20 bg-tertiary/10 text-tertiary"
+          : "border-white/10 bg-white/[0.03] text-slate-300");
+    node.textContent = message;
+  }
+
+  function renderTasks(state) {
+    if (!state || typeof state !== "object") {
+      return;
+    }
+
+    const boardItems = Array.isArray(state.tasks) ? state.tasks.filter((task) => task?.status !== "done").slice(0, 6) : [];
+    const timelineItems = Array.isArray(state.taskStream?.items) ? state.taskStream.items.slice(0, 6) : boardItems;
+    const completedItems = Array.isArray(state.taskCompleted?.items) ? state.taskCompleted.items.slice(0, 6) : [];
     const timelineNextKey = JSON.stringify(
       timelineItems.map((task) => [task?.id ?? "", task?.title ?? "", task?.eta ?? "", task?.status ?? "", task?.streamState ?? ""])
     );
     const boardNextKey = JSON.stringify(boardItems.map((task) => [task?.id ?? "", task?.title ?? "", task?.eta ?? "", task?.status ?? ""]));
-    const timelineHost = document.querySelector('[data-module="task-timeline"]');
-    const boardHost = document.querySelector('[data-module="task-board"]');
+    const completedNextKey = JSON.stringify(completedItems.map((task) => [task?.id ?? "", task?.title ?? "", task?.eta ?? ""]));
+    const currentNextKey = JSON.stringify(state.taskCurrent ?? null);
+    const nextTaskKey = JSON.stringify(state.taskNext ?? null);
+    const timelineHost = qs('[data-module="task-timeline"]');
+    const boardHost = qs('[data-module="task-board"]');
+    const currentHost = qs('[data-module="task-current"]');
+    const nextHost = qs('[data-module="task-next"]');
+    const completedHost = qs('[data-module="task-completed"]');
 
     if (timelineHost && timelineKey !== timelineNextKey) {
       timelineKey = timelineNextKey;
@@ -173,8 +304,124 @@
       boardKey = boardNextKey;
       renderBoard(boardHost, boardItems);
     }
+
+    if (completedHost && completedKey !== completedNextKey) {
+      completedKey = completedNextKey;
+      renderCompleted(completedHost, completedItems);
+    }
+
+    if (currentHost) {
+      currentKey = currentNextKey;
+      renderFocusCard(currentHost, state.taskCurrent, {
+        heading: "Current Task",
+        emptyMessage: "No current task",
+        accentClass: "border-primary/10 bg-primary/5",
+        actionLabel: "Mark Complete",
+        actionName: "complete-current-task",
+      });
+    }
+
+    if (nextHost) {
+      nextKey = nextTaskKey;
+      renderFocusCard(nextHost, state.taskNext, {
+        heading: "Next Task",
+        emptyMessage: "No next task",
+        accentClass: "border-secondary/20 bg-secondary/10",
+      });
+    }
+
+    setText('[data-field="taskActiveCount"]', String(boardItems.length));
+    setText('[data-field="taskCompletedCount"]', String(completedItems.length));
+    renderTaskFeedback(state.taskUi);
+  }
+
+  function initTasks(state, reload) {
+    const form = qs('[data-module="task-create-form"]');
+    const input = qs('[data-module="task-create-input"]');
+    const currentHost = qs('[data-module="task-current"]');
+
+    if (!form || !input || !currentHost) {
+      return;
+    }
+
+    if (!taskFormBound) {
+      taskFormBound = true;
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const title = input.value.trim();
+
+        if (!title || taskPending) {
+          state.taskUi.status = "error";
+          state.taskUi.error = title ? "Task action is still running." : "Task title is required.";
+          state.taskUi.message = "";
+          renderTasks(state);
+          return;
+        }
+
+        taskPending = true;
+        state.taskUi.status = "saving";
+        state.taskUi.error = "";
+        state.taskUi.message = "Creating task...";
+        renderTasks(state);
+
+        try {
+          await createTask({ title });
+          input.value = "";
+          await reload();
+          state.taskUi.status = "success";
+          state.taskUi.error = "";
+          state.taskUi.message = "Task created and queued.";
+        } catch (error) {
+          state.taskUi.status = "error";
+          state.taskUi.error = error?.message || "Failed to create task.";
+          state.taskUi.message = "";
+        } finally {
+          taskPending = false;
+          renderTasks(state);
+        }
+      });
+    }
+
+    if (!taskActionBound) {
+      taskActionBound = true;
+      currentHost.addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action='complete-current-task']");
+        if (!button || taskPending) {
+          return;
+        }
+
+        const taskId = button.dataset.taskId;
+        if (!taskId) {
+          return;
+        }
+
+        taskPending = true;
+        state.taskUi.status = "saving";
+        state.taskUi.error = "";
+        state.taskUi.message = "Completing current task...";
+        renderTasks(state);
+
+        try {
+          await completeTask(taskId);
+          await reload();
+          state.taskUi.status = "success";
+          state.taskUi.error = "";
+          state.taskUi.message = "Current task completed.";
+        } catch (error) {
+          state.taskUi.status = "error";
+          state.taskUi.error = error?.message || "Failed to complete current task.";
+          state.taskUi.message = "";
+        } finally {
+          taskPending = false;
+          renderTasks(state);
+        }
+      });
+    }
+
+    renderTasks(state);
   }
 
   global.VibeRenderers = global.VibeRenderers || {};
+  global.VibeRenderers.initTasks = initTasks;
   global.VibeRenderers.renderTasks = renderTasks;
 })(window);

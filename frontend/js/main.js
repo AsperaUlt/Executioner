@@ -1,7 +1,7 @@
 (function bootApp(global) {
   const { fetchAllData } = global.VibeApi;
   const { createState, mergeData } = global.VibeState;
-  const { initAudio, renderAudio, renderFiles, renderStats, renderTasks, renderMusic } = global.VibeRenderers;
+  const { initAudio, initTasks, renderAudio, renderFiles, renderStats, renderTasks, renderMusic } = global.VibeRenderers;
 
   const state = createState();
   let initialized = false;
@@ -59,7 +59,7 @@
 
   function renderAll() {
     renderStats(state.summary, state.stats);
-    renderTasks(state.tasks, state.taskStream);
+    renderTasks(state);
     renderFiles(state.quickAccess);
     renderMusic(state.music);
     renderAudio(state.audio);
@@ -244,6 +244,7 @@
     bindNavigation();
     bindUiActions();
     initAudio(state.audio);
+    initTasks(state, loadAndRender);
     initBackgroundFx();
     void loadAndRender();
   }

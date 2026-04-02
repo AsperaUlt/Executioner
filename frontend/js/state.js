@@ -14,8 +14,18 @@
       insights: [],
     },
     tasks: [],
+    taskCurrent: null,
+    taskNext: null,
+    taskCompleted: {
+      items: [],
+    },
     taskStream: {
       items: [],
+    },
+    taskUi: {
+      status: "idle",
+      message: "Create a task to update the execution queue.",
+      error: "",
     },
     quickAccess: {
       items: [],
@@ -27,6 +37,8 @@
     audio: {
       status: "idle",
       query: "",
+      submittedQuery: "",
+      suggestions: [],
       results: [],
       currentTrack: null,
       playbackUrl: "",
@@ -34,6 +46,7 @@
       error: "",
       message: "Search for a track to start the Audio MVP.",
       isSearching: false,
+      isSuggesting: false,
       isResolving: false,
     },
   };
@@ -52,6 +65,7 @@
       ...payload,
       summary: { ...state.summary, ...payload.summary },
       stats: { ...state.stats, ...payload.stats },
+      taskCompleted: { ...state.taskCompleted, ...payload.taskCompleted },
       taskStream: { ...state.taskStream, ...payload.taskStream },
       quickAccess: { ...state.quickAccess, ...payload.quickAccess },
       music: { ...state.music, ...payload.music },

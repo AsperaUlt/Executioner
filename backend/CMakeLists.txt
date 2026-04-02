@@ -24,7 +24,8 @@ FetchContent_MakeAvailable(cpp_httplib nlohmann_json)
 add_executable(
   vibe_backend
   src/main.cpp
-  src/audio_service.cpp
+  src/music_service.cpp
+  src/music_service_host.cpp
   src/router.cpp
   src/data_provider.cpp
 )

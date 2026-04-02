@@ -7,6 +7,7 @@
 
 #include <httplib.h>
 
+#include "music_service_host.hpp"
 #include "router.hpp"
 
 namespace {
@@ -77,6 +78,8 @@ bool serve_file(const fs::path& filePath, httplib::Response& res) {
 int main(int argc, char** argv) {
   std::cout << "[startup] initializing server" << std::endl;
   httplib::Server server;
+  const vibe::MusicServiceHost musicServiceHost;
+  musicServiceHost.log_startup_plan();
   vibe::register_routes(server);
   std::cout << "[startup] API routes registered" << std::endl;
 

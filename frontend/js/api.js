@@ -7,14 +7,32 @@
   }
 
   async function fetchJson(path, options = {}) {
+    const { body, headers, method = "GET", ...restOptions } = options;
     const response = await fetch(`${getApiBase()}${path}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      ...options,
+      method,
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(headers || {}),
+      },
+      ...(body !== undefined ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}),
+      ...restOptions,
     });
 
     if (!response.ok) {
-      throw new Error(`API ${path} failed: ${response.status}`);
+      const rawBody = await response.text();
+      let message = `API ${path} failed: ${response.status}`;
+
+      try {
+        const payload = rawBody ? JSON.parse(rawBody) : null;
+        if (payload?.message) {
+          message = payload.message;
+        }
+      } catch (_error) {
+        // Keep the default status-based message when the response is not JSON.
+      }
+
+      throw new Error(message);
     }
 
     return response.json();
@@ -60,42 +78,55 @@
   }
 
   async function fetchAllData() {
-    const [summary, stats, music, taskStream, quickAccess, tasks] = await Promise.all([
+    const [summary, stats, music, taskStream, quickAccess, tasks, taskCurrent, taskNext, taskCompleted] = await Promise.all([
       fetchJson("/api/dashboard/summary"),
       fetchJson("/api/stats"),
-      fetchJson("/api/home/music-snapshot"),
+      fetchMusicQueue(),
       fetchJson("/api/home/task-stream"),
       fetchJson("/api/files/quick-access"),
       fetchJson("/api/tasks"),
+      fetchJson("/api/tasks/current"),
+      fetchJson("/api/tasks/next"),
+      fetchJson("/api/tasks/completed"),
     ]);
 
-    return { summary, stats, taskStream, quickAccess, tasks, music };
+    return { summary, stats, taskStream, quickAccess, tasks, taskCurrent, taskNext, taskCompleted, music };
   }
 
-  function searchAudio(query, options = {}) {
-    return fetchApiEnvelope(`/api/audio/search?${buildQuery({ q: query })}`, options);
+  function createTask(task) {
+    return fetchJson("/api/tasks", {
+      method: "POST",
+      body: task,
+    });
   }
 
-  function fetchAudioTrack(id) {
-    return fetchApiEnvelope(`/api/audio/track?${buildQuery({ id })}`);
+  function completeTask(id) {
+    return fetchJson(`/api/tasks/${encodeURIComponent(id)}/complete`, {
+      method: "POST",
+    });
   }
 
-  function fetchAudioUrl(id) {
-    return fetchApiEnvelope(`/api/audio/url?${buildQuery({ id })}`);
+  function fetchMusicHealth(options = {}) {
+    return fetchApiEnvelope("/api/music/health", options);
   }
 
-  function fetchAudioLyric(id) {
-    return fetchApiEnvelope(`/api/audio/lyric?${buildQuery({ id })}`);
+  function searchMusic(query, options = {}) {
+    return fetchApiEnvelope(`/api/music/search?${buildQuery({ q: query })}`, options);
+  }
+
+  function fetchMusicQueue(options = {}) {
+    return fetchJson("/api/music/queue", options);
   }
 
   global.VibeApi = {
+    completeTask,
+    createTask,
     fetchAllData,
     fetchApiEnvelope,
-    fetchAudioLyric,
-    fetchAudioTrack,
-    fetchAudioUrl,
     fetchJson,
+    fetchMusicHealth,
+    fetchMusicQueue,
     getApiBase,
-    searchAudio,
+    searchMusic,
   };
 })(window);
