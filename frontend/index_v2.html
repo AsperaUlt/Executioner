@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Righteous&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script>
     tailwind.config = {
@@ -38,6 +38,19 @@
   <style>
     :root {
       color-scheme: dark;
+      --app-footer-offset: 2rem;
+    }
+
+    html {
+      overflow-y: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    html::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
 
     body {
@@ -118,7 +131,16 @@
       min-height: 0;
       overflow: visible;
       scroll-padding-top: 1.5rem;
-      scroll-padding-bottom: 2rem;
+      scroll-padding-bottom: calc(var(--app-footer-offset) + 1rem);
+      padding-bottom: var(--app-footer-offset);
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    [data-scroll-viewport]::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
 
     [data-module="music-suggestions-panel"] {
@@ -169,6 +191,134 @@
       will-change: transform;
     }
 
+    .font-music-display {
+      font-family: "Righteous", "Plus Jakarta Sans", sans-serif;
+    }
+
+    .font-music-body {
+      font-family: "Poppins", "Inter", sans-serif;
+    }
+
+    .music-route {
+      --music-ink: #f8fafc;
+      --music-panel: rgba(14, 18, 40, 0.92);
+      --music-panel-soft: rgba(28, 35, 88, 0.44);
+      --music-border: rgba(129, 140, 248, 0.22);
+      --music-glow: rgba(34, 197, 94, 0.18);
+    }
+
+    .music-block {
+      background:
+        linear-gradient(160deg, rgba(67, 56, 202, 0.24), rgba(15, 15, 35, 0.92)),
+        var(--music-panel);
+      border: 1px solid var(--music-border);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 20px 60px rgba(4, 7, 20, 0.35);
+    }
+
+    .music-block-soft {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+        var(--music-panel-soft);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .music-orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(54px);
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .music-result-card {
+      background:
+        linear-gradient(135deg, rgba(67, 56, 202, 0.16), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
+    }
+
+    .music-result-card:hover,
+    .music-result-card:focus-within {
+      transform: translateY(-2px);
+      border-color: rgba(151, 247, 255, 0.22);
+      box-shadow: 0 18px 40px rgba(9, 13, 31, 0.3);
+    }
+
+    .music-spectrum-bar {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .music-spectrum-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(34, 197, 94, 0.1), rgba(151, 247, 255, 0.3), rgba(67, 56, 202, 0.18));
+      transform: scaleX(var(--music-bar-scale, 0.5));
+      transform-origin: left center;
+    }
+
+    .vibe-shell-panel {
+      background:
+        linear-gradient(160deg, rgba(67, 56, 202, 0.18), rgba(15, 15, 35, 0.92)),
+        rgba(14, 18, 40, 0.86);
+      border: 1px solid rgba(129, 140, 248, 0.18);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 20px 60px rgba(4, 7, 20, 0.28);
+      backdrop-filter: blur(28px);
+    }
+
+    .vibe-panel {
+      background:
+        linear-gradient(160deg, rgba(67, 56, 202, 0.2), rgba(15, 15, 35, 0.9)),
+        rgba(14, 18, 40, 0.9);
+      border: 1px solid rgba(129, 140, 248, 0.2);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 16px 44px rgba(4, 7, 20, 0.24);
+    }
+
+    .vibe-panel-soft {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+        rgba(17, 21, 29, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .vibe-kicker {
+      font-family: "Poppins", "Inter", sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(151, 247, 255, 0.82);
+    }
+
+    .vibe-title {
+      font-family: "Righteous", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: 0.01em;
+      color: #f8fafc;
+    }
+
+    .login-modal[hidden] {
+      display: none;
+    }
+
+    .vibe-copy {
+      font-family: "Poppins", "Inter", sans-serif;
+      color: #cbd5e1;
+    }
+
+    .vibe-stat-card {
+      background: rgba(2, 6, 23, 0.44);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1.6rem;
+      padding: 1rem;
+    }
+
     @keyframes panel-fade {
       from {
         opacity: 0;
@@ -182,10 +332,16 @@
 
     .app-footer {
       position: fixed;
-      bottom: 1.25rem;
+      bottom: 1rem;
       left: calc(18rem + 2.5rem);
       right: 1.5rem;
       z-index: 20;
+    }
+
+    .app-footer .glass-panel {
+      min-height: 4.75rem;
+      padding-top: 0.875rem;
+      padding-bottom: 0.875rem;
     }
 
     @media (max-width: 1024px) {
@@ -193,10 +349,14 @@
         overflow-y: auto;
       }
 
+      :root {
+        --app-footer-offset: 0.75rem;
+      }
+
       .app-footer {
         position: static;
         inset: auto;
-        margin-top: 1rem;
+        margin-top: 0.75rem;
       }
 
       [data-scroll-viewport] {
@@ -212,9 +372,126 @@
   <div class="parallax-glow bg-primary/50 top-[-7rem] left-[-8rem]" data-parallax></div>
   <div class="parallax-glow bg-secondary/40 bottom-[-9rem] right-[-7rem]" data-parallax></div>
 
+  <div class="login-modal fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-md" data-module="login-modal" hidden>
+    <div class="absolute inset-0" data-action="close-login-modal"></div>
+    <section class="vibe-panel relative z-10 w-full max-w-2xl rounded-[2.2rem] p-6 sm:p-7" aria-modal="true" aria-labelledby="login-modal-title" role="dialog">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="vibe-kicker">Access Deck</p>
+          <h2 class="vibe-title mt-2 text-3xl" id="login-modal-title">Netease Login</h2>
+          <p class="mt-3 max-w-xl text-sm leading-7 text-slate-300">支持手机号和邮箱登录。文档建议避免频繁调用登录接口，并优先通过同源代理完成请求。</p>
+        </div>
+        <button class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-white/[0.08]" data-action="close-login-modal" type="button">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <button class="font-music-body rounded-full border border-primary/30 bg-primary/12 px-4 py-2 text-sm font-semibold text-primary transition" data-login-tab="email" type="button">Email</button>
+        <button class="font-music-body rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-300 transition" data-login-tab="cellphone" type="button">Cellphone</button>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div class="space-y-5">
+          <form class="space-y-4" data-module="login-form-email">
+            <div class="space-y-2">
+              <label class="text-xs uppercase tracking-[0.22em] text-slate-400" for="login-email">Email</label>
+              <input class="font-music-body w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/80" id="login-email" name="email" placeholder="name@163.com" type="email" />
+            </div>
+            <div class="space-y-2">
+              <label class="text-xs uppercase tracking-[0.22em] text-slate-400" for="login-email-password">Password</label>
+              <input class="font-music-body w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/80" id="login-email-password" name="password" placeholder="Password" type="password" />
+            </div>
+            <button class="font-music-body w-full rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Sign in with Email</button>
+          </form>
+
+          <form class="hidden space-y-4" data-module="login-form-cellphone">
+            <div class="grid gap-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
+              <div class="space-y-2">
+                <label class="text-xs uppercase tracking-[0.22em] text-slate-400" for="login-countrycode">Code</label>
+                <input class="font-music-body w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/80" id="login-countrycode" name="countrycode" placeholder="86" type="text" value="86" />
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs uppercase tracking-[0.22em] text-slate-400" for="login-phone">Phone</label>
+                <input class="font-music-body w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/80" id="login-phone" name="phone" placeholder="13800000000" type="tel" />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="text-xs uppercase tracking-[0.22em] text-slate-400" for="login-phone-password">Password</label>
+              <input class="font-music-body w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/80" id="login-phone-password" name="password" placeholder="Password" type="password" />
+            </div>
+            <button class="font-music-body w-full rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Sign in with Phone</button>
+          </form>
+
+          <div class="rounded-[1.6rem] border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-slate-300" data-module="login-feedback">Use your Netease account. The returned cookie will be stored in this browser for later authenticated requests.</div>
+        </div>
+
+        <aside class="space-y-4">
+          <div class="vibe-panel-soft rounded-[1.8rem] p-5">
+            <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Session</p>
+            <p class="vibe-title mt-3 text-xl" data-field="loginSessionState">Checking status</p>
+            <p class="mt-2 text-sm text-slate-400" data-field="loginSessionMeta">No active cookie loaded</p>
+          </div>
+          <div class="vibe-panel-soft rounded-[1.8rem] p-5">
+            <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Supported Flow</p>
+            <div class="mt-3 space-y-3 text-sm leading-6 text-slate-300">
+              <p>Cellphone login uses `/login/cellphone` with `phone`, `password`, optional `countrycode`.</p>
+              <p>Email login uses `/login` with `email` and `password`.</p>
+              <p>Upstream cookies are returned by the login API and kept locally for reuse.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div class="login-modal fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-md" data-module="help-modal" hidden>
+    <div class="absolute inset-0" data-action="close-help-modal"></div>
+    <section class="vibe-panel relative z-10 w-full max-w-2xl rounded-[2.2rem] p-6 sm:p-7" aria-modal="true" aria-labelledby="help-modal-title" role="dialog">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="vibe-kicker">Access Deck</p>
+          <h2 class="vibe-title mt-2 text-3xl" id="help-modal-title">Help Center</h2>
+          <p class="mt-3 max-w-xl text-sm leading-7 text-slate-300">这里保留项目支持入口和外部资源跳转，便于快速定位仓库与后续个人站点。</p>
+        </div>
+        <button class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-white/[0.08]" data-action="close-help-modal" type="button">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="mt-6 grid gap-5">
+        <a
+          class="vibe-panel-soft flex items-center justify-between gap-4 rounded-[1.8rem] p-5 transition hover:border-primary/30 hover:bg-white/[0.06]"
+          href="https://github.com/AsperaUlt/Executioner"
+          rel="noreferrer"
+          target="_blank"
+        >
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Project Repository</p>
+            <p class="vibe-title mt-2 text-xl">Executioner on GitHub</p>
+            <p class="mt-2 text-sm leading-6 text-slate-300">Open the public repository for code, issues, and project history.</p>
+          </div>
+          <span class="material-symbols-outlined text-primary">open_in_new</span>
+        </a>
+
+        <div class="vibe-panel-soft rounded-[1.8rem] border border-amber-300/25 bg-amber-300/8 p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.22em] text-amber-200">Personal Website Placeholder</p>
+              <p class="vibe-title mt-2 text-xl">Reserved external link slot</p>
+            </div>
+            <span class="rounded-full border border-amber-200/30 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-100">DO NOT DELETE</span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-200">Placeholder for a future personal website URL. This block is intentionally reserved and marked non-removable.</p>
+          <div class="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-400">https://your-personal-site.example</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <div class="relative z-10 flex min-h-screen flex-col lg:flex-row">
     <aside class="w-full shrink-0 px-4 py-4 lg:w-72 lg:px-6 lg:py-6">
-      <div class="glass-panel flex h-full flex-col rounded-[2rem] p-5 lg:min-h-[calc(100vh-3rem)] lg:p-6">
+      <div class="vibe-shell-panel flex h-full flex-col rounded-[2rem] p-5 lg:min-h-[calc(100vh-3rem)] lg:p-6">
         <div>
           <p class="font-headline text-2xl font-extrabold tracking-tight text-primary">Executioner</p>
           <p class="mt-1 text-[11px] uppercase tracking-[0.24em] text-slate-400">The Ethereal Observer</p>
@@ -265,90 +542,104 @@
     </aside>
 
     <div class="flex min-h-screen min-h-0 flex-1 flex-col px-4 pb-4 pt-0 lg:pr-6 lg:pt-6">
-      <header class="glass-panel flex h-20 items-center justify-between rounded-[2rem] px-5 lg:px-8">
+      <header class="vibe-shell-panel flex min-h-20 items-center justify-between rounded-[2rem] px-5 py-4 lg:px-8" data-module="global-utility-bar">
         <div>
-          <p class="text-[11px] uppercase tracking-[0.28em] text-primary/80">Control Surface</p>
-          <h1 class="font-headline text-2xl font-extrabold tracking-tight">Unified Mission Console</h1>
+          <p class="vibe-kicker">Access Deck</p>
+          <h1 class="vibe-title text-2xl">Unified Mission Console</h1>
         </div>
-        <div class="flex items-center gap-3 rounded-full border border-white/5 bg-white/[0.03] px-4 py-2">
-          <span class="material-symbols-outlined text-slate-400">sensors</span>
-          <span class="text-sm text-slate-300">127.0.0.1:18080</span>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+          <a
+            class="font-music-body inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-slate-200 transition hover:border-primary/30 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+            href="#login"
+            data-action="login-entry"
+          >
+            <span class="material-symbols-outlined text-base text-primary">account_circle</span>
+            <span>Login</span>
+          </a>
+          <a
+            class="font-music-body inline-flex min-h-11 items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+            href="#help"
+            data-action="help-entry"
+          >
+            <span class="material-symbols-outlined text-base">help</span>
+            <span>Help</span>
+          </a>
         </div>
       </header>
 
-      <main class="scrollbar-hidden relative mt-4 flex-1 min-h-0 overflow-x-clip overflow-y-visible pb-12 pr-1 lg:pb-40 lg:overflow-y-visible" data-scroll-shell data-scroll-viewport>
+      <main class="scrollbar-hidden relative mt-4 flex-1 min-h-0 overflow-x-clip overflow-y-visible pr-1 lg:overflow-y-visible" data-scroll-shell data-scroll-viewport>
         <section class="route-panel active" data-route-panel="home">
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 overflow-hidden rounded-[2.2rem] p-7 xl:col-span-8" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 overflow-hidden rounded-[2.4rem] p-7 xl:col-span-8" data-motion="glass-card">
               <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-2xl">
-                  <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Dashboard Core</p>
-                  <h2 class="mt-4 font-headline text-4xl font-extrabold tracking-tight lg:text-5xl">One shell, live data, no page swaps.</h2>
+                  <p class="vibe-kicker">Dashboard Core</p>
+                  <h2 class="vibe-title mt-4 text-4xl lg:text-5xl">One shell, live data, no page swaps.</h2>
                   <p class="mt-4 max-w-xl text-sm leading-7 text-slate-300">Home 聚合当前会话状态、任务完成情况与音乐快照。页面保持单页切换，不刷新整页，便于本地持续联调。</p>
                 </div>
                 <div class="grid min-w-[18rem] gap-4 md:grid-cols-3">
-                  <div class="rounded-[1.6rem] bg-white/[0.04] p-4">
+                  <div class="vibe-stat-card">
                     <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Songs Played</p>
-                    <p class="mt-3 font-headline text-4xl font-extrabold text-tertiary" data-field="songsPlayed">--</p>
+                    <p class="vibe-title mt-3 text-4xl text-tertiary" data-field="songsPlayed">--</p>
                   </div>
-                  <div class="rounded-[1.6rem] bg-white/[0.04] p-4">
+                  <div class="vibe-stat-card">
                     <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Focus Minutes</p>
-                    <p class="mt-3 font-headline text-4xl font-extrabold text-primary" data-field="focusMinutes">--</p>
+                    <p class="vibe-title mt-3 text-4xl text-primary" data-field="focusMinutes">--</p>
                   </div>
-                  <div class="rounded-[1.6rem] bg-white/[0.04] p-4">
+                  <div class="vibe-stat-card">
                     <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Tasks Completed</p>
-                    <p class="mt-3 font-headline text-4xl font-extrabold text-secondary" data-field="tasksClosed">--</p>
+                    <p class="vibe-title mt-3 text-4xl text-secondary" data-field="tasksClosed">--</p>
                   </div>
                 </div>
               </div>
 
               <div class="mt-10 grid gap-4 md:grid-cols-3">
-                <article class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                <article class="vibe-panel-soft rounded-[1.8rem] p-5">
                   <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Current Track</p>
-                  <p class="mt-3 font-headline text-xl font-bold" data-field="trackTitle">No Track</p>
+                  <p class="vibe-title mt-3 text-xl" data-field="trackTitle">No Track</p>
                   <p class="mt-1 text-sm text-slate-400" data-field="trackArtist">Offline</p>
                   <p class="mt-2 text-xs text-slate-500">Bound to `/api/home/music-snapshot`</p>
                 </article>
-                <article class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                <article class="vibe-panel-soft rounded-[1.8rem] p-5">
                   <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Task Efficiency</p>
-                  <p class="mt-3 font-headline text-xl font-bold text-primary" data-field="taskEfficiency">--</p>
+                  <p class="vibe-title mt-3 text-xl text-primary" data-field="taskEfficiency">--</p>
                   <p class="mt-1 text-sm text-slate-400">Bound to `/api/stats`</p>
                 </article>
-                <article class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                <article class="vibe-panel-soft rounded-[1.8rem] p-5">
                   <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Queue Depth</p>
-                  <p class="mt-3 font-headline text-xl font-bold text-tertiary" data-field="queueCount">--</p>
+                  <p class="vibe-title mt-3 text-xl text-tertiary" data-field="queueCount">--</p>
                   <p class="mt-1 text-sm text-slate-400">Bound to `/api/home/music-snapshot`</p>
                 </article>
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-4" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Music Snapshot</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Next in queue</h3>
+                  <p class="vibe-kicker">Music Snapshot</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Next in queue</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">queue_music</span>
               </div>
               <div class="mt-6 space-y-3" data-module="home-queue"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-7" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Task Stream</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Immediate execution timeline</h3>
+                  <p class="vibe-kicker">Task Stream</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Immediate execution timeline</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">timeline</span>
               </div>
               <div class="mt-6 grid gap-3" data-module="task-timeline"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-5" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Field Notes</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Quick access</h3>
+                  <p class="vibe-kicker">Field Notes</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Quick access</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">folder_open</span>
               </div>
@@ -359,29 +650,29 @@
 
         <section class="route-panel" data-route-panel="tasks">
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-8" data-motion="glass-card">
-              <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Task Command</p>
-              <h2 class="mt-3 font-headline text-4xl font-extrabold tracking-tight">Create tasks, drive the queue, keep the flow visible.</h2>
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-8" data-motion="glass-card">
+              <p class="vibe-kicker">Task Command</p>
+              <h2 class="vibe-title mt-3 text-4xl">Create tasks, drive the queue, keep the flow visible.</h2>
               <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300">任务模块保持现有后端驱动模式。切换侧栏只切换面板，不刷新页面，也不会重复初始化整页效果。</p>
               <form class="mt-6 flex flex-col gap-3 md:flex-row" data-module="task-create-form">
-                <input class="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-white/[0.06]" data-module="task-create-input" placeholder="Create a new task title" type="text" />
-                <button class="rounded-2xl bg-primary px-6 py-4 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Create Task</button>
+                <input class="font-music-body min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/60 px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/80" data-module="task-create-input" placeholder="Create a new task title" type="text" />
+                <button class="font-music-body rounded-2xl bg-emerald-500 px-6 py-4 text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Create Task</button>
               </form>
-              <div class="mt-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300" data-module="task-feedback">Create a task to update the execution queue.</div>
+              <div class="vibe-panel-soft mt-4 rounded-[1.4rem] px-4 py-3 text-sm text-slate-300" data-module="task-feedback">Create a task to update the execution queue.</div>
               <div class="mt-8 grid gap-4 md:grid-cols-2">
-                <div class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                <div class="vibe-panel-soft rounded-[1.8rem] p-5">
                   <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Active Queue</p>
-                  <p class="mt-3 font-headline text-4xl font-extrabold text-primary" data-field="taskActiveCount">0</p>
+                  <p class="vibe-title mt-3 text-4xl text-primary" data-field="taskActiveCount">0</p>
                 </div>
-                <div class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
+                <div class="vibe-panel-soft rounded-[1.8rem] p-5">
                   <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">Completed</p>
-                  <p class="mt-3 font-headline text-4xl font-extrabold text-secondary" data-field="taskCompletedCount">0</p>
+                  <p class="vibe-title mt-3 text-4xl text-secondary" data-field="taskCompletedCount">0</p>
                 </div>
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-4" data-motion="glass-card">
-              <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Execution Rules</p>
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-4" data-motion="glass-card">
+              <p class="vibe-kicker">Execution Rules</p>
               <div class="mt-5 space-y-3 text-sm text-slate-300">
                 <p class="rounded-2xl border border-white/5 bg-white/[0.03] p-4">`done` 显示为已完成高亮状态。</p>
                 <p class="rounded-2xl border border-white/5 bg-white/[0.03] p-4">`in_progress` 显示为执行中状态。</p>
@@ -389,44 +680,44 @@
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-6" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-6" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Current</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Live task in execution</h3>
+                  <p class="vibe-kicker">Current</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Live task in execution</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">play_circle</span>
               </div>
               <div class="mt-6" data-module="task-current"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-6" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-6" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Next</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Next task in line</h3>
+                  <p class="vibe-kicker">Next</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Next task in line</h3>
                 </div>
                 <span class="material-symbols-outlined text-secondary">skip_next</span>
               </div>
               <div class="mt-6" data-module="task-next"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-12" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Execution Board</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Active queue from the backend</h3>
+                  <p class="vibe-kicker">Execution Board</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Active queue from the backend</h3>
                 </div>
                 <span class="material-symbols-outlined text-primary">task_alt</span>
               </div>
               <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-module="task-board"></div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-12" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-12" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Completed</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Muted completion history</h3>
+                  <p class="vibe-kicker">Completed</p>
+                  <h3 class="vibe-title mt-2 text-2xl">Muted completion history</h3>
                 </div>
                 <span class="material-symbols-outlined text-slate-400">history</span>
               </div>
@@ -435,126 +726,156 @@
           </div>
         </section>
 
-        <section class="route-panel" data-route-panel="music">
-          <div class="grid grid-cols-1 gap-6 pb-4 xl:grid-cols-12" data-module="music-grid">
-            <div class="glass-panel col-span-1 overflow-visible rounded-[2.4rem] p-8 xl:col-span-7" data-module="music-search-shell" data-motion="music-card">
-              <p class="text-[11px] uppercase tracking-[0.3em] text-primary/80">Music Atlas</p>
-              <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <h2 class="font-headline text-4xl font-extrabold tracking-tight">One music surface for discovery, queue context, and playback.</h2>
-                <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]" data-module="music-status-badge">idle</span>
-              </div>
-              <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300" data-field="musicSearchMessage">Search for a track to open the Music workspace.</p>
-              <form class="mt-8 flex flex-col gap-3 md:flex-row md:items-start" data-module="music-search-form">
-                <div class="relative min-w-0 flex-1">
-                  <label class="sr-only" for="music-search-input">Search songs, artists, or albums</label>
-                  <input aria-autocomplete="list" aria-controls="music-suggestions-panel" aria-expanded="false" autocomplete="off" class="min-w-0 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-white/[0.06] focus:shadow-[0_0_0_1px_rgba(151,247,255,0.12)]" data-module="music-search-input" id="music-search-input" placeholder="Search songs, artists, or albums" type="search" />
-                  <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                    <span data-module="music-search-hint">Discover</span>
+        <section class="route-panel music-route" data-route-panel="music">
+          <div class="grid grid-cols-1 gap-6 xl:grid-cols-12" data-module="music-grid">
+            <div class="music-block relative col-span-1 overflow-visible rounded-[2.6rem] p-6 sm:p-7 lg:p-8 xl:col-span-8" data-module="music-search-shell" data-motion="music-card">
+              <div class="music-orb right-[8%] top-[8%] h-28 w-28 bg-primary/30"></div>
+              <div class="music-orb bottom-[16%] right-[20%] h-20 w-20 bg-secondary/40"></div>
+              <div class="relative z-10">
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div class="max-w-3xl">
+                    <p class="font-music-body text-[11px] uppercase tracking-[0.34em] text-primary/80">Music Command Deck</p>
+                    <h2 class="font-music-display mt-4 text-4xl leading-none text-[var(--music-ink)] sm:text-5xl xl:text-6xl">Build the room, then let the search cut through it.</h2>
+                    <p class="font-music-body mt-5 max-w-2xl text-sm leading-7 text-slate-300" data-field="musicSearchMessage">Search for a track to open the Music workspace.</p>
                   </div>
-                  <div class="relative z-20 mt-3 rounded-[1.8rem] border border-white/10 bg-slate-950/90 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-2xl" data-module="music-suggestions-panel" id="music-suggestions-panel" hidden>
-                    <div class="px-3 pb-2 pt-1">
-                      <p class="text-[11px] uppercase tracking-[0.22em] text-primary/80" data-field="musicSuggestionLabel">Top matches</p>
+                  <div class="flex flex-wrap items-start gap-3">
+                    <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300" data-module="music-status-badge">idle</span>
+                    <span class="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-emerald-200">Suggestions First</span>
+                    <span class="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-indigo-200">Single Origin</span>
+                  </div>
+                </div>
+
+                <div class="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+                  <div class="music-block-soft rounded-[2rem] p-4 sm:p-5">
+                    <form class="flex flex-col gap-3 md:flex-row md:items-start" data-module="music-search-form">
+                      <div class="relative min-w-0 flex-1">
+                        <label class="sr-only" for="music-search-input">Search songs, artists, or albums</label>
+                        <input aria-autocomplete="list" aria-controls="music-suggestions-panel" aria-expanded="false" autocomplete="off" class="font-music-body min-w-0 w-full rounded-[1.7rem] border border-white/10 bg-slate-950/70 px-5 py-4 text-sm text-white outline-none transition focus:border-primary/40 focus:bg-slate-950/90 focus:shadow-[0_0_0_1px_rgba(151,247,255,0.12)]" data-module="music-search-input" id="music-search-input" placeholder="Search songs, artists, or albums" type="search" />
+                        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                          <span data-module="music-search-hint">Discover</span>
+                        </div>
+                        <div class="relative z-20 mt-3 rounded-[1.8rem] border border-white/10 bg-slate-950/95 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-2xl" data-module="music-suggestions-panel" id="music-suggestions-panel" hidden>
+                          <div class="px-3 pb-2 pt-1">
+                            <p class="font-music-body text-[11px] uppercase tracking-[0.22em] text-primary/80" data-field="musicSuggestionLabel">Top matches</p>
+                          </div>
+                          <div class="scrollbar-hidden max-h-[22rem] space-y-2 overflow-y-auto pr-1" data-module="music-suggestions"></div>
+                        </div>
+                      </div>
+                      <button class="font-music-body rounded-[1.7rem] bg-emerald-500 px-6 py-4 text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Commit Search</button>
+                    </form>
+                    <div class="mt-4 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                      <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">Input shows suggestions</span>
+                      <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">Enter opens full results</span>
+                      <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">No full page reload</span>
                     </div>
-                    <div class="scrollbar-hidden max-h-[22rem] space-y-2 overflow-y-auto pr-1" data-module="music-suggestions"></div>
+                    <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                      <div class="rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4">
+                        <p class="font-music-body text-[11px] uppercase tracking-[0.22em] text-slate-500">Committed Query</p>
+                        <p class="font-music-display mt-3 text-2xl text-primary" data-field="musicCurrentArtist">Waiting</p>
+                        <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500" data-field="musicResultMeta">No committed request</p>
+                      </div>
+                      <div class="rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4">
+                        <p class="font-music-body text-[11px] uppercase tracking-[0.22em] text-slate-500">Result Count</p>
+                        <p class="font-music-display mt-3 text-2xl text-white" data-field="musicResultCount">00</p>
+                        <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">Ranked locally</p>
+                      </div>
+                      <div class="rounded-[1.6rem] border border-white/10 bg-slate-950/65 p-4">
+                        <p class="font-music-body text-[11px] uppercase tracking-[0.22em] text-slate-500">Result Snapshot</p>
+                        <p class="font-music-display mt-3 text-2xl text-white" data-field="musicCurrentTitle">No results</p>
+                        <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500" data-field="musicCurrentAlbum">Awaiting metadata</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-[2rem] border border-emerald-400/20 bg-emerald-400/[0.08] p-5">
+                    <p class="font-music-body text-[11px] uppercase tracking-[0.24em] text-emerald-200">Lead Selection</p>
+                    <h3 class="font-music-display mt-3 text-3xl leading-tight text-white" data-field="musicLeadTitle">No lead track yet.</h3>
+                    <p class="font-music-body mt-3 text-sm text-slate-200" data-field="musicLeadMeta">Commit a query to promote the strongest result into this spotlight card.</p>
+                    <div class="mt-5 space-y-3">
+                      <div>
+                        <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                          <span>Discovery</span>
+                          <span data-field="musicLeadArtist">Standby</span>
+                        </div>
+                        <div class="music-spectrum-bar mt-2 h-2 rounded-full bg-white/10" style="--music-bar-scale:0.82"></div>
+                      </div>
+                      <div>
+                        <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                          <span>Metadata</span>
+                          <span data-field="musicLeadAlbum">No album</span>
+                        </div>
+                        <div class="music-spectrum-bar mt-2 h-2 rounded-full bg-white/10" style="--music-bar-scale:0.58"></div>
+                      </div>
+                      <div>
+                        <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                          <span>Duration</span>
+                          <span data-field="musicLeadDuration">--:--</span>
+                        </div>
+                        <div class="music-spectrum-bar mt-2 h-2 rounded-full bg-white/10" style="--music-bar-scale:0.34"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button class="rounded-2xl bg-primary px-6 py-4 font-headline text-sm font-bold text-slate-950 transition hover:brightness-110 active:scale-[0.98]" type="submit">Open Music</button>
-              </form>
-              <p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Suggestions arrive first. Press Enter to commit the full result list.</p>
-              <div class="mt-6 rounded-[1.6rem] border border-red-400/15 bg-red-400/10 px-4 py-3 text-sm text-red-100" data-module="music-error" hidden></div>
-              <div class="mt-4 rounded-[1.6rem] border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-primary" data-module="music-loading" hidden></div>
-              <div class="mt-6 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5" data-module="music-empty">
-                <p class="text-sm text-slate-300" data-field="musicEmptyState">No results yet. Try a keyword when the music service is ready.</p>
+
+                <div class="mt-6 rounded-[1.6rem] border border-red-400/15 bg-red-400/10 px-4 py-3 text-sm text-red-100" data-module="music-error" hidden></div>
+                <div class="mt-4 rounded-[1.6rem] border border-primary/10 bg-primary/5 px-4 py-3 text-sm text-primary" data-module="music-loading" hidden></div>
+                <div class="mt-6 rounded-[1.8rem] border border-white/10 bg-slate-950/55 p-5" data-module="music-empty">
+                  <p class="font-music-body text-sm text-slate-300" data-field="musicEmptyState">No results yet. Try a keyword when the music service is ready.</p>
+                </div>
+                <div class="scrollbar-hidden mt-6 max-h-[min(36rem,56vh)] space-y-3 overflow-y-auto pr-2 xl:max-h-[min(42rem,62vh)]" data-module="music-results" hidden></div>
               </div>
-              <div class="scrollbar-hidden mt-6 max-h-[min(34rem,52vh)] space-y-3 overflow-y-auto pr-2 xl:max-h-[min(38rem,56vh)]" data-module="music-results" hidden></div>
             </div>
 
-            <div class="col-span-1 grid gap-6 xl:col-span-5" data-module="music-side-stack">
-              <div class="glass-panel rounded-[2.4rem] p-8" data-motion="music-card">
+            <div class="col-span-1 grid gap-6 xl:col-span-4 xl:auto-rows-fr" data-module="music-side-stack">
+              <div class="music-block rounded-[2.4rem] p-6 sm:p-7" data-motion="music-card">
                 <div class="flex items-start justify-between gap-4">
                   <div>
-                    <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Search Snapshot</p>
-                    <h3 class="mt-2 font-headline text-2xl font-bold">Current query state</h3>
+                    <p class="font-music-body text-[11px] uppercase tracking-[0.26em] text-primary/80">Daily Playlist</p>
+                    <h3 class="font-music-display mt-2 text-3xl text-white">Reserved for the next mix surface.</h3>
                   </div>
-                  <span class="material-symbols-outlined text-primary">manage_search</span>
+                  <span class="material-symbols-outlined text-emerald-300">library_music</span>
                 </div>
-                <div class="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div class="rounded-[1.6rem] border border-primary/10 bg-primary/5 p-5">
-                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Committed Query</p>
-                    <p class="mt-3 font-headline text-2xl font-bold text-primary" data-field="musicCurrentArtist">Waiting for search</p>
-                    <p class="mt-2 text-xs uppercase tracking-[0.22em] text-slate-500">Search state</p>
-                  </div>
-                  <div class="rounded-[1.6rem] border border-white/5 bg-white/[0.03] p-5">
-                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Result Snapshot</p>
-                    <p class="mt-3 font-headline text-2xl font-bold text-white" data-field="musicCurrentTitle">No search results</p>
-                    <p class="mt-2 text-xs uppercase tracking-[0.22em] text-slate-500" data-field="musicCurrentAlbum">No album metadata</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="glass-panel rounded-[2.4rem] p-8" data-motion="music-card">
-                <div class="flex items-start justify-between gap-4">
-                  <div>
-                    <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Daily Playlist</p>
-                    <h3 class="mt-2 font-headline text-2xl font-bold">Reserved for daily mix</h3>
-                  </div>
-                  <span class="material-symbols-outlined text-tertiary">library_music</span>
-                </div>
-                <div class="mt-6 rounded-[1.8rem] border border-tertiary/15 bg-tertiary/5 p-5">
-                  <p class="text-sm leading-7 text-slate-300">This area is intentionally left for the upcoming daily playlist endpoint so the search summary and result list no longer compete for the same space.</p>
-                  <div class="mt-5 flex flex-wrap gap-3">
+                <div class="mt-6 rounded-[1.8rem] border border-white/10 bg-slate-950/60 p-5">
+                  <p class="font-music-body text-sm leading-7 text-slate-300">This panel stays open for the future daily playlist endpoint, which means search results can stay dense on the left while recommendation content gets its own stage on the right.</p>
+                  <div class="mt-5 flex flex-wrap gap-2">
                     <span class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">Future endpoint</span>
-                    <span class="rounded-full border border-tertiary/20 bg-tertiary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-tertiary">Daily mix slot</span>
+                    <span class="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-emerald-200">Dedicated recommendation rail</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-5" data-motion="music-card">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Playback</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Listening surface</h3>
+              <div class="music-block rounded-[2.4rem] p-6 sm:p-7" data-motion="music-card">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-music-body text-[11px] uppercase tracking-[0.26em] text-primary/80">Lyrics</p>
+                    <h3 class="font-music-display mt-2 text-2xl text-white">Readable lyric panel</h3>
+                  </div>
+                  <span class="material-symbols-outlined text-primary">lyrics</span>
                 </div>
-                <span class="material-symbols-outlined text-primary">play_circle</span>
+                <pre class="scrollbar-hidden font-music-body mt-5 max-h-[17rem] overflow-y-auto whitespace-pre-wrap break-words rounded-[1.6rem] border border-white/10 bg-slate-950/60 p-4 text-sm leading-7 text-slate-300 xl:max-h-[19rem]" data-field="musicLyrics">Lyrics will appear here. If the upstream service returns no lyric, this area stays readable.</pre>
               </div>
-              <div class="mt-6 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5">
-                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Playback</p>
-                <audio class="mt-4 w-full" data-module="music-player" controls preload="none"></audio>
-              </div>
-            </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-7" data-motion="music-card">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Lyrics</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Readable metadata layer</h3>
+              <div class="music-block rounded-[2.4rem] p-6 sm:p-7" data-motion="music-card">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-music-body text-[11px] uppercase tracking-[0.26em] text-primary/80">Next Queue</p>
+                    <h3 class="font-music-display mt-2 text-2xl text-white">Upcoming local queue data</h3>
+                  </div>
+                  <span class="material-symbols-outlined text-primary">queue_music</span>
                 </div>
-                <span class="material-symbols-outlined text-primary">lyrics</span>
+                <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-1" data-module="music-queue"></div>
               </div>
-              <pre class="mt-6 whitespace-pre-wrap break-words rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-5 font-body text-sm leading-7 text-slate-300" data-field="musicLyrics">Lyrics will appear here. If the upstream service returns no lyric, this area stays readable.</pre>
-            </div>
-
-            <div class="glass-panel col-span-1 rounded-[2.4rem] p-8 xl:col-span-12" data-motion="music-card">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Fallback Queue</p>
-                  <h3 class="mt-2 font-headline text-2xl font-bold">Existing local queue data</h3>
-                </div>
-                <span class="material-symbols-outlined text-primary">queue_music</span>
-              </div>
-              <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-module="music-queue"></div>
             </div>
           </div>
         </section>
 
         <section class="route-panel" data-route-panel="insights">
           <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-7" data-motion="glass-card">
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-7" data-motion="glass-card">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Stats Lens</p>
-                  <h2 class="mt-3 font-headline text-4xl font-extrabold tracking-tight">Insight rendering now targets the new DOM.</h2>
+                  <p class="vibe-kicker">Stats Lens</p>
+                  <h2 class="vibe-title mt-3 text-4xl">Insight rendering now targets the new DOM.</h2>
                 </div>
                 <div class="relative h-28 w-28">
                   <svg class="h-full w-full" viewBox="0 0 200 200">
@@ -567,9 +888,9 @@
                   </div>
                 </div>
               </div>
-              <div class="mt-8 rounded-[1.8rem] border border-white/5 bg-white/[0.03] p-6">
+              <div class="vibe-panel-soft mt-8 rounded-[1.8rem] p-6">
                 <div class="mb-4 flex items-center justify-between">
-                  <p class="font-headline text-xl font-bold">Deep Work Trend</p>
+                  <p class="vibe-title text-xl">Deep Work Trend</p>
                   <span class="text-sm text-slate-400">7 data points</span>
                 </div>
                 <svg class="h-64 w-full" viewBox="0 0 800 220" preserveAspectRatio="none">
@@ -585,8 +906,8 @@
               </div>
             </div>
 
-            <div class="glass-panel col-span-1 rounded-[2.2rem] p-7 xl:col-span-5" data-motion="glass-card">
-              <p class="text-[11px] uppercase tracking-[0.26em] text-primary/80">Highlights</p>
+            <div class="vibe-panel col-span-1 rounded-[2.4rem] p-7 xl:col-span-5" data-motion="glass-card">
+              <p class="vibe-kicker">Highlights</p>
               <div class="mt-6 space-y-3" data-module="flow-insights-secondary"></div>
             </div>
           </div>
@@ -594,7 +915,7 @@
       </main>
 
       <footer class="app-footer pointer-events-none">
-        <div class="glass-panel pointer-events-auto flex items-center gap-4 rounded-[1.8rem] px-5 py-4">
+        <div class="vibe-shell-panel pointer-events-auto flex items-center gap-4 rounded-[1.8rem] px-5 py-4">
           <div class="min-w-0 flex-1">
             <p class="truncate font-headline text-lg font-bold" data-field="footerTrackTitle">No Track</p>
             <p class="truncate text-sm text-slate-400" data-field="footerTrackArtist">Offline</p>
@@ -619,6 +940,7 @@
   <script src="/js/renderers/stats.js"></script>
   <script src="/js/renderers/tasks.js"></script>
   <script src="/js/renderers/files.js"></script>
+  <script src="/js/renderers/access.js"></script>
   <script src="/js/renderers/music.js"></script>
   <script src="/js/main.js"></script>
 </body>

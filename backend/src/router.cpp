@@ -202,12 +202,33 @@ void write_api_result(httplib::Response& res, const MusicServiceResult& result) 
   res.set_content(to_json(result).dump(), "application/json; charset=utf-8");
 }
 
+std::string trim_copy(std::string value) {
+  const auto first = value.find_first_not_of(" \t\r\n");
+  if (first == std::string::npos) {
+    return "";
+  }
+
+  const auto last = value.find_last_not_of(" \t\r\n");
+  return value.substr(first, last - first + 1);
+}
+
 MusicServiceResult missing_parameter(const std::string& parameterName) {
   return {
       false,
       400,
       "missing_parameter",
       "Missing required query parameter: " + parameterName,
+      "vibe_music_route",
+      Json::object(),
+  };
+}
+
+MusicServiceResult invalid_request(const std::string& message) {
+  return {
+      false,
+      400,
+      "invalid_request",
+      message,
       "vibe_music_route",
       Json::object(),
   };
@@ -252,6 +273,10 @@ void register_routes(httplib::Server& server) {
 
   server.Get("/api/stats", [payload](const httplib::Request&, httplib::Response& res) {
     write_json(res, payload.stats);
+  });
+
+  server.Get("/api/access/deck", [payload](const httplib::Request&, httplib::Response& res) {
+    write_json(res, payload.accessDeck);
   });
 
   server.Get("/api/home/music-snapshot", [payload](const httplib::Request&, httplib::Response& res) {
@@ -336,7 +361,71 @@ void register_routes(httplib::Server& server) {
     write_api_result(res, musicService.search_tracks(query));
   };
 
+  const auto handle_music_lyric = [musicService](const httplib::Request& req, httplib::Response& res) {
+    if (!req.has_param("id")) {
+      write_api_result(res, missing_parameter("id"));
+      return;
+    }
+
+    const auto trackId = req.get_param_value("id");
+    if (trackId.empty()) {
+      write_api_result(res, missing_parameter("id"));
+      return;
+    }
+
+    write_api_result(res, musicService.lyric_by_track_id(trackId));
+  };
+
   server.Get("/api/music/search", handle_music_search);
+  server.Get("/api/music/lyric", handle_music_lyric);
+
+  server.Get("/api/music-account-status", [musicService](const httplib::Request& req, httplib::Response& res) {
+    const std::string cookie = req.has_param("cookie") ? req.get_param_value("cookie") : "";
+    write_api_result(res, musicService.login_status(cookie));
+  });
+
+  server.Post("/api/music-account-email", [musicService](const httplib::Request& req, httplib::Response& res) {
+    const Json body = parse_json_body(req);
+    if (body.is_discarded() || !body.is_object()) {
+      write_api_result(res, invalid_request("Request body must be valid JSON."));
+      return;
+    }
+
+    const std::string email = trim_copy(body.value("email", ""));
+    const std::string password = body.value("password", "");
+    if (email.empty()) {
+      write_api_result(res, missing_parameter("email"));
+      return;
+    }
+    if (password.empty()) {
+      write_api_result(res, missing_parameter("password"));
+      return;
+    }
+
+    write_api_result(res, musicService.login_with_email(email, password));
+  });
+
+  server.Post("/api/music-account-cellphone", [musicService](const httplib::Request& req, httplib::Response& res) {
+    const Json body = parse_json_body(req);
+    if (body.is_discarded() || !body.is_object()) {
+      write_api_result(res, invalid_request("Request body must be valid JSON."));
+      return;
+    }
+
+    const std::string phone = trim_copy(body.value("phone", ""));
+    const std::string password = body.value("password", "");
+    const std::string countryCode = trim_copy(body.value("countrycode", ""));
+    if (phone.empty()) {
+      write_api_result(res, missing_parameter("phone"));
+      return;
+    }
+    if (password.empty()) {
+      write_api_result(res, missing_parameter("password"));
+      return;
+    }
+
+    write_api_result(res, musicService.login_with_cellphone(phone, password, countryCode));
+  });
 }
 
 }  // namespace vibe

@@ -34,6 +34,28 @@ ApiPayload build_payload() {
        })},
   };
 
+  payload.accessDeck = {
+      {"items",
+       Json::array({
+           {{"id", "login"},
+            {"title", "Login"},
+            {"label", "Login"},
+            {"href", "#login"},
+            {"description", "Open the login entry point"},
+            {"icon", "account_circle"},
+            {"variant", "primary"},
+            {"enabled", true}},
+           {{"id", "help"},
+            {"title", "Help"},
+            {"label", "Help"},
+            {"href", "#help"},
+            {"description", "Open the help entry point"},
+            {"icon", "help"},
+            {"variant", "secondary"},
+            {"enabled", true}},
+       })},
+  };
+
   payload.tasks = Json::array({
       {{"id", "t1"}, {"title", "Design Sync"}, {"status", "done"}, {"eta", "09:00"}},
       {{"id", "t2"}, {"title", "Build API"}, {"status", "in_progress"}, {"eta", "11:30"}},

@@ -24,6 +24,12 @@ class MusicService {
 
   MusicServiceResult health() const;
   MusicServiceResult search_tracks(const std::string& query) const;
+  MusicServiceResult lyric_by_track_id(const std::string& trackId) const;
+  MusicServiceResult login_with_email(const std::string& email, const std::string& password) const;
+  MusicServiceResult login_with_cellphone(const std::string& phone,
+                                          const std::string& password,
+                                          const std::string& countryCode = "") const;
+  MusicServiceResult login_status(const std::string& cookie = "") const;
 
  private:
   MusicServiceResult request_json(const std::string& vibeRoute, const std::string& upstreamPath) const;
@@ -32,7 +38,10 @@ class MusicService {
                                        std::string message,
                                        std::string source = "vibe_music_service");
   static Json normalize_health_payload(const Json& upstream);
-  static Json normalize_search_payload(const Json& upstream);
+  static Json normalize_search_payload(const Json& upstream, const std::string& query);
+  static Json normalize_lyric_payload(const Json& upstream, const std::string& trackId);
+  static Json normalize_login_payload(const Json& upstream);
+  static Json normalize_login_status_payload(const Json& upstream);
 
   std::string upstreamBaseUrl_;
   int timeoutMs_;

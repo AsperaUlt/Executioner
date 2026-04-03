@@ -8,129 +8,214 @@
 - 当前主入口：`http://127.0.0.1:18080/`
 - 当前前端入口文件：[frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
 - 当前后端入口文件：[backend/src/main.cpp](/F:/LLM/VIBE/backend/src/main.cpp)
-- 状态更新时间：2026-04-02
+- 状态更新时间：2026-04-03
 
 ## 当前阶段结论
 
 - 项目主骨架已稳定为“后端托管前端资源 + 同源 API + 单页路由切换”的结构。
-- Music 页已完成一轮大型前端重构，前端主链路命名已从 Audio 统一迁移到 Music。
-- 本轮改动未改变现有搜索接口 `/api/music/search`，也未改动现有搜索结果数据结构。
-- Music 页已完成滚动容器、搜索建议区、结果区和右侧摘要区的一轮结构性整理，当前重点进入体验细化与浏览器实操验收。
-- 下一阶段重点不再是扩 API，而是继续优化 Music 页滚动体验、搜索交互稳定性、动画观感与信息层次。
+- 前端主链路已经从 `Audio` 统一迁移到 `Music`，并保留旧 `#audio` 到 `#music` 的兼容跳转。
+- 本轮已完成 Music 链路收口、搜索体验后端化、歌词接口接入、Access Deck 顶栏与弹层扩展。
+- 当前阶段重点已经从“纯前端重构”进入“功能补齐 + 交互验收 + 命名/结构清理”的阶段。
+- 下一阶段目标不再只是打磨搜索 UI，而是开始补音乐模块基础功能，例如日推等入口能力。
 
 ## 本轮已完成
 
-### 1. 前端主链路从 Audio 统一迁移到 Music
+### 1. Music 链路与页面结构收口
 
-- 路由从 `#audio` 改为 `#music`。
-- 导航、标题、`data-module`、`data-field` 已统一改成 `music-*`。
-- 保留了旧 `#audio` 到 `#music` 的兼容跳转，避免历史链接直接失效。
+- Music 页已删除旧 `Search Snapshot` 和 `Playback` 区块。
+- 查询状态已并入 `Music Atlas` 主区，页面主叙事集中到搜索、结果、歌词和队列。
+- `Daily Playlist`、`Lyrics`、`Next Queue` 的区块比例已重排，Music 页整体更紧凑。
+- 底部异常留白已处理，改为由 footer 高度驱动的自适应占位。
+- 所有页面共享的右侧主滚动条已隐藏，但保留滚动能力。
 
-### 2. Music 搜索渲染逻辑已合并收口
+### 2. Music 搜索体验后端化
 
-- 已删除 [frontend/js/renderers/audio.js](/F:/LLM/VIBE/frontend/js/renderers/audio.js)。
-- 搜索建议、结果列表、滚动协同、状态渲染已并入 [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)。
-- [frontend/js/main.js](/F:/LLM/VIBE/frontend/js/main.js) 已改为使用 `initMusicBrowser` / `renderMusicBrowser`。
-- [frontend/js/state.js](/F:/LLM/VIBE/frontend/js/state.js) 中 `state.audio` 已改为 `state.musicBrowser`。
+- 后端搜索结果已增加二次重排逻辑。
+- 当前排序规则已按标题 / 歌手 / 专辑的精确命中、前缀命中、包含命中、分词命中进行评分。
+- 前端本地排序逻辑已删除，直接消费后端返回顺序。
+- 前端仍保留“输入阶段展示 suggestions，提交后展示完整结果”的交互规则。
 
-### 3. Music 页滚动与视觉层已统一
+### 3. 歌词接口接入
 
-- 已恢复整页滚动，`main` 不再承担唯一滚动职责。
-- 已隐藏页面和 Music 结果区/建议区的可见滚动条，但保留滚动能力。
-- Music 页已去掉右侧 `sticky` 栈，避免滚动时摘要区压住下方 `Playback` / `Lyrics` / `Fallback Queue`。
-- 已压缩结果区高度，减少页面底部不明留白。
+- 后端新增歌词接口：`/api/music/lyric?id=...`
+- 前端 Lyrics 区已在提交搜索后，对首个结果拉取真实歌词并展示。
+- 当前歌词区在接口失败或无歌词时，仍保持可读的 fallback 文案。
 
-### 4. Music 页动画表现已做一轮柔化处理
+### 4. Access Deck 与全局入口扩展
 
-- 路由切入时为 Music 子模块改为更柔和的 GSAP 入场动画。
-- 给 Music 子模块增加了轻微“柔体漂浮”和 hover 回弹效果。
-- 动画当前仅作用于 Music 页专用 `music-card`，避免影响全站其他模块。
+- 后端新增 `Access Deck` 数据接口：`/api/access/deck`
+- 顶栏右上角已从本地端口展示改为 `Login` / `Help` 两个入口。
+- 共享头部 panel 的语义已从 `Control Surface` 调整为 `Access Deck`。
+- `Login / Help` 按钮已由后端配置驱动，而不是纯前端硬编码。
 
-### 5. 本轮改动范围已集中在前端 Music 链路
+### 5. Login / Help 弹层
 
-- 改动文件：
+- 已新增 [frontend/js/renderers/access.js](/F:/LLM/VIBE/frontend/js/renderers/access.js)
+- Login 弹层已支持两种表单：
+  - Email 登录
+  - Cellphone 登录
+- Login 弹层已具备：
+  - 打开 / 关闭
+  - Tab 切换
+  - `Escape` 关闭
+  - 登录反馈区
+  - 登录状态展示
+- Help 弹层已加入：
+  - 项目仓库外链：`https://github.com/AsperaUlt/Executioner`
+  - 明确标记 `DO NOT DELETE` 的个人网站占位区
+
+### 6. Login 弹层动效
+
+- Login 弹层已加入 GSAP 开合动画。
+- 已先完成基础开合动画，再升级为 timeline 版本。
+- 当前开启动画包含：
+  - 遮罩淡入
+  - 主卡轻微弹性落位
+  - 标题、tab、表单与侧栏信息分段入场
+- 已保留 `prefers-reduced-motion` 分支，减少动画模式下不强行动效。
+
+### 7. 全站视觉语言同步
+
+- Music 页的新设计语言已同步到 `home / tasks / insights` 页面。
+- 当前全站已统一为更高对比、块状分层、圆角大卡片的视觉方向。
+- 共享壳层、标题体系和局部卡片材质已统一到同一套样式命名。
+
+## 本轮主要改动文件
+
+- 后端：
+  - [backend/include/music_service.hpp](/F:/LLM/VIBE/backend/include/music_service.hpp)
+  - [backend/src/music_service.cpp](/F:/LLM/VIBE/backend/src/music_service.cpp)
+  - [backend/src/router.cpp](/F:/LLM/VIBE/backend/src/router.cpp)
+  - [backend/include/api_models.hpp](/F:/LLM/VIBE/backend/include/api_models.hpp)
+  - [backend/src/data_provider.cpp](/F:/LLM/VIBE/backend/src/data_provider.cpp)
+- 前端：
   - [frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
-  - [frontend/js/main.js](/F:/LLM/VIBE/frontend/js/main.js)
-  - [frontend/js/state.js](/F:/LLM/VIBE/frontend/js/state.js)
-  - [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)
-- 删除文件：
-  - [frontend/js/renderers/audio.js](/F:/LLM/VIBE/frontend/js/renderers/audio.js)
-- 未改动：
   - [frontend/js/api.js](/F:/LLM/VIBE/frontend/js/api.js)
-  - 后端搜索接口
-  - 搜索结果 JSON 结构
-
-### 6. 补充修正与调试结果
-
-- 已保留旧 `#audio` hash 到 `#music` 的兼容处理。
-- 已完成 Music 页滚动壳层和搜索模块命名收口，便于 CLI2 按新结构做页面验收。
-- 当前前端主链路已统一为 Music，但后端内部仍存在少量历史 `audio` 命名残留。
-
-## 接口兼容性
-
-- 保持现有 `/api/music/search` 不变。
-- 未新增后端接口。
-- 未改动 [frontend/js/api.js](/F:/LLM/VIBE/frontend/js/api.js)。
-- 现有搜索结果数据结构未变。
+  - [frontend/js/state.js](/F:/LLM/VIBE/frontend/js/state.js)
+  - [frontend/js/main.js](/F:/LLM/VIBE/frontend/js/main.js)
+  - [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)
+  - [frontend/js/renderers/files.js](/F:/LLM/VIBE/frontend/js/renderers/files.js)
+  - [frontend/js/renderers/access.js](/F:/LLM/VIBE/frontend/js/renderers/access.js)
+- 其他：
+  - [build_project.bat](/F:/LLM/VIBE/build_project.bat)
+  - [generate_project.bat](/F:/LLM/VIBE/generate_project.bat)
 
 ## 已完成验证
 
-- `node --check frontend/js/main.js`
-- `node --check frontend/js/renderers/music.js`
-- 本地启动后端后访问 `http://127.0.0.1:18080/` 返回 `200`
-- 本地访问 `http://127.0.0.1:18080/js/renderers/music.js` 返回 `200`
-- 本地访问 `http://127.0.0.1:18080/js/main.js` 返回 `200`
+- 语法检查通过：
+  - `node --check frontend/js/api.js`
+  - `node --check frontend/js/main.js`
+  - `node --check frontend/js/state.js`
+  - `node --check frontend/js/renderers/music.js`
+  - `node --check frontend/js/renderers/files.js`
+  - `node --check frontend/js/renderers/access.js`
+- 构建验证：
+  - `cmake --build backend/build --config Debug` 通过
+- 接口验证：
+  - `/api/music/search?q=test` 正常
+  - `/api/music/lyric?id=123` 正常
+  - `/api/access/deck` 正常
+- 页面级静态确认：
+  - Login 弹层 DOM、Help 弹层 DOM、Access Deck 顶栏入口均已接入页面
+  - Login 弹层 GSAP timeline 动画脚本已通过语法检查
+
+## 当前阻塞 / 遗留
+
+### 1. 登录新路由运行时仍有 404 风险
+
+- 当前状态需要区分“代码已写好”和“运行时已完全打通”：
+  - Login 弹层 UI 已完成
+  - 基础登录 API 调用层已完成
+  - 但根据本轮反馈，新增登录路由在运行时仍返回 `404`
+- 已知现象：
+  - `/api/music/...` 相关路由正常
+  - `/api/access/deck` 正常
+  - 登录相关新路由运行时未完全跑通
+- 这说明后续需要优先验证路由注册 / 匹配 / 实际运行版本，而不是继续改前端表单本身。
+
+### 2. 命名债务仍未完全清理
+
+- 后端仍残留 `audio` 相关命名与配置引用。
+- 前端 router 中仍保留 `#audio -> #music` 的兼容逻辑。
+- 文档和代码中的品牌/命名仍存在一定不一致，例如：
+  - `Executioner`
+  - `Unified Mission Console`
+  - `Access Deck`
+- 这些不会立即阻塞功能，但会影响后续可读性和指令部署。
+
+### 3. 浏览器级完整验收尚未完成
+
+- 当前已完成代码级、接口级、局部交互级确认。
+- 尚未完成完整浏览器自动化回归。
+- 仍需人工或自动化继续确认：
+  - Music 页底部留白是否已完全消失
+  - `Daily Playlist / Lyrics / Next Queue` 新比例是否自然
+  - 后端二次重排后的搜索建议是否符合预期
+  - 首条结果歌词是否稳定显示
+  - Login / Help 弹层的开关与动画在实际浏览器中是否符合预期
 
 ## 当前验收边界
 
-- 当前已完成代码级与接口级验收。
-- 当前尚未完成完整浏览器自动化回归。
-- 因此下面这些项目目前仍应视为“待浏览器实操确认”，而不是最终交互体验已完全验收通过：
-  - Music 页滚动时，右侧摘要区是否还会压住 `Playback` / `Lyrics` / `Fallback Queue`
-  - 搜索建议展开时页面是否仍存在遮挡、裁切或不可达区域
-  - 搜索结果较多时，结果区内部滚动与整页滚动是否协同正常
-  - 页面底部是否仍存在异常留白
-  - Music 页 GSAP 软体动效是否造成布局抖动或点击区域错位
+- 已完成：
+  - Music 主链路收口
+  - 歌词接口接入
+  - 搜索排序后端化
+  - Access Deck 顶栏与弹层框架
+  - 登录 / 帮助弹层基础交互
+  - Login GSAP timeline 动画
+  - 全站视觉同步
+- 尚未完成：
+  - 登录请求运行时全链路打通
+  - 日推等音乐基础功能
+  - 完整浏览器自动化回归
+  - 历史命名与文档完全清理
 
 ## 建议 CLI2 重点验证的点
 
-- Music 页滚动时，右侧摘要区是否还会压住 `Playback` / `Lyrics` / `Fallback Queue`
-- 搜索建议展开时，页面是否仍存在遮挡、不可达区域
-- 搜索结果较多时，结果区内部滚动与整页滚动是否协同正常
-- 页面底部是否仍存在异常留白
-- `#audio` 旧 hash 是否会正确跳转到 `#music`
-- Music 页 GSAP 软体动效是否只带来视觉效果，没有造成布局抖动或点击区域错位
+- Music 页底部留白是否已消失
+- `Daily Playlist / Lyrics / Next Queue` 新比例是否自然
+- 后端二次重排后的搜索建议是否符合预期
+- Lyrics 是否能随首条结果正确显示
+- Help 弹层的开关、外链和占位区
+- 登录相关新路由为什么在运行时 `404`
+- Login 弹层的 timeline 动画是否存在抖动、遮挡、点击错位或 reduced-motion 分支问题
+- 全站隐藏右侧滚动条后，是否仍保持正常滚动和可达性
 
 ## 已知限制
 
-- 建议仍然复用现有搜索接口结果做前端排序，不是独立 suggestion API。
-- `Daily Playlist` 当前只是预留位，还没有接真实端口。
-- 当前环境未完成浏览器自动化测试依赖配置，因此尚未进行完整 UI 自动回归。
-- 后端仍有历史 `audio` 命名残留，但前端主链路已经统一为 Music。
+- `Daily Playlist` 当前仍是预留位，还没有接真实端口。
+- 登录状态当前依赖前端本地存储 cookie，并通过基础 API 查询状态，安全策略仍需后续收紧。
+- 当前环境未完成完整 UI 自动化测试依赖配置，因此尚未做完整回归。
+- 后端仍存在历史 `audio` 命名残留。
 
 ## 下一阶段计划
 
 ### 目标
 
-- 进一步优化 Music 页整体体验。
-- 继续打磨滚动、搜索建议、结果呈现、摘要信息和动效之间的协同。
-- 在不破坏当前同源结构和现有搜索接口的前提下，提高 Music 页的稳定性、可达性和观感一致性。
+- 进入音乐模块基础功能补齐阶段。
+- 在保持当前同源架构和已完成 Music/Access Deck UI 的前提下，继续补充日推等音乐基础能力。
+- 同时完成登录链路运行时问题定位，并继续清理命名债务。
 
 ### 重点方向
 
-- 确保 Music 页滚动过程中，各子模块不再发生遮挡、重叠或不可达。
-- 细化建议区内部滚动与整页滚动的协同关系，减少滚动冲突并保持自然手感。
-- 继续验证并稳定“输入阶段只出建议、提交后才出结果”的行为规则。
-- 清理右侧摘要区与左侧结果区的重复信息，确保信息分层清晰。
-- 继续观察 GSAP 软体动效在不同屏宽和连续交互下是否引发布局抖动、点击错位或性能波动。
-- 为后续 `Daily Playlist` 接口接入保留清晰布局和稳定容器。
+- 接入音乐模块基础功能：
+  - `Daily Playlist`
+  - 后续推荐 / 日推类基础入口
+- 跑通登录相关运行时链路，解决新增登录路由 `404` 问题。
+- 继续验收 Music 页的新结构、新比例、新歌词链路。
+- 清理后端与文档中的历史 `audio` 命名，提升可读性。
+- 视情况补全 Help 弹层和 Access Deck 的后续行为定义。
 
 ## 当前重点文件
 
 - [frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
-- [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)
+- [frontend/js/api.js](/F:/LLM/VIBE/frontend/js/api.js)
 - [frontend/js/state.js](/F:/LLM/VIBE/frontend/js/state.js)
 - [frontend/js/main.js](/F:/LLM/VIBE/frontend/js/main.js)
-- [frontend/js/api.js](/F:/LLM/VIBE/frontend/js/api.js)
+- [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)
+- [frontend/js/renderers/files.js](/F:/LLM/VIBE/frontend/js/renderers/files.js)
+- [frontend/js/renderers/access.js](/F:/LLM/VIBE/frontend/js/renderers/access.js)
+- [backend/include/music_service.hpp](/F:/LLM/VIBE/backend/include/music_service.hpp)
 - [backend/src/music_service.cpp](/F:/LLM/VIBE/backend/src/music_service.cpp)
-- [backend/src/main.cpp](/F:/LLM/VIBE/backend/src/main.cpp)
+- [backend/src/router.cpp](/F:/LLM/VIBE/backend/src/router.cpp)
+- [backend/src/data_provider.cpp](/F:/LLM/VIBE/backend/src/data_provider.cpp)

@@ -78,9 +78,10 @@
   }
 
   async function fetchAllData() {
-    const [summary, stats, music, taskStream, quickAccess, tasks, taskCurrent, taskNext, taskCompleted] = await Promise.all([
+    const [summary, stats, accessDeck, music, taskStream, quickAccess, tasks, taskCurrent, taskNext, taskCompleted] = await Promise.all([
       fetchJson("/api/dashboard/summary"),
       fetchJson("/api/stats"),
+      fetchJson("/api/access/deck"),
       fetchMusicQueue(),
       fetchJson("/api/home/task-stream"),
       fetchJson("/api/files/quick-access"),
@@ -90,7 +91,7 @@
       fetchJson("/api/tasks/completed"),
     ]);
 
-    return { summary, stats, taskStream, quickAccess, tasks, taskCurrent, taskNext, taskCompleted, music };
+    return { summary, stats, accessDeck, taskStream, quickAccess, tasks, taskCurrent, taskNext, taskCompleted, music };
   }
 
   function createTask(task) {
@@ -114,6 +115,34 @@
     return fetchApiEnvelope(`/api/music/search?${buildQuery({ q: query })}`, options);
   }
 
+  function fetchMusicLyric(trackId, options = {}) {
+    return fetchApiEnvelope(`/api/music/lyric?${buildQuery({ id: trackId })}`, options);
+  }
+
+  function fetchLoginStatus(cookie, options = {}) {
+    return fetchApiEnvelope(`/api/music-account-status?${buildQuery({ cookie })}`, options);
+  }
+
+  function loginWithEmail(payload) {
+    return fetchApiEnvelope("/api/music-account-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  function loginWithCellphone(payload) {
+    return fetchApiEnvelope("/api/music-account-cellphone", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
   function fetchMusicQueue(options = {}) {
     return fetchJson("/api/music/queue", options);
   }
@@ -123,10 +152,14 @@
     createTask,
     fetchAllData,
     fetchApiEnvelope,
+    fetchLoginStatus,
     fetchJson,
     fetchMusicHealth,
+    fetchMusicLyric,
     fetchMusicQueue,
     getApiBase,
+    loginWithCellphone,
+    loginWithEmail,
     searchMusic,
   };
 })(window);

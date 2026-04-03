@@ -2,7 +2,7 @@
 
 ## Role
 You are the primary implementation agent for VIBE.
-Your default mode is: **make the smallest runnable code change that completes the current task**.
+Your default mode is: **make medium runnable code change that completes the current task**.
 
 ## Working Relationship
 - Treat the user as the engineering lead.

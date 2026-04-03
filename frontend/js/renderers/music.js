@@ -1,5 +1,5 @@
 (function attachMusicRenderer(global) {
-  const { searchMusic } = global.VibeApi;
+  const { fetchMusicLyric, searchMusic } = global.VibeApi;
   const SEARCH_DEBOUNCE_MS = 300;
   const MIN_SEARCH_LENGTH = 2;
   const SUGGESTION_LIMIT = 6;
@@ -232,61 +232,10 @@
     return String(value || "").trim().toLowerCase();
   }
 
-  function scoreText(query, value, exactScore, prefixScore, includesScore) {
-    const normalizedValue = normalizeText(value);
-    if (!normalizedValue) {
-      return 0;
-    }
-
-    if (normalizedValue === query) {
-      return exactScore;
-    }
-
-    if (normalizedValue.startsWith(query)) {
-      return prefixScore;
-    }
-
-    if (normalizedValue.includes(query)) {
-      return includesScore;
-    }
-
-    return 0;
-  }
-
-  function scoreTrack(query, track) {
-    const artist = formatArtists(track);
-    const album = formatAlbum(track);
-    const title = track?.title ?? "";
-    let score = 0;
-
-    score += scoreText(query, title, 1000, 700, 420);
-    score += scoreText(query, artist, 300, 210, 120);
-    score += scoreText(query, album, 150, 100, 60);
-
-    if (normalizeText(title).split(/\s+/).some((token) => token === query)) {
-      score += 80;
-    }
-
-    const durationPenalty = typeof track?.durationMs === "number" ? Math.min(track.durationMs / 10000, 20) : 0;
-    return score - durationPenalty;
-  }
-
-  function sortByRelevance(items, query) {
-    const normalizedQuery = normalizeText(query);
-    return [...items]
-      .map((track, index) => ({ track, index, score: scoreTrack(normalizedQuery, track) }))
-      .sort((left, right) => {
-        if (right.score !== left.score) {
-          return right.score - left.score;
-        }
-        return left.index - right.index;
-      })
-      .map((entry) => entry.track);
-  }
-
   let queueKey = "";
   let homeQueueKey = "";
   let progressKey = null;
+  let resultsFingerprint = "";
 
   function setProgress(field, value) {
     const nodes = qsa(`[data-field="${field}"]`);
@@ -493,35 +442,74 @@
       if (!row) {
         row = document.createElement("article");
         row.className =
-          "grid gap-4 rounded-[1.5rem] border border-white/5 bg-white/[0.03] px-4 py-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_auto] md:items-center";
+          "music-result-card grid gap-4 rounded-[1.8rem] px-4 py-4 md:grid-cols-[auto_minmax(0,1.6fr)_minmax(0,1fr)_auto] md:items-center";
+
+        const rank = document.createElement("div");
+        rank.className =
+          "font-music-display flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/10 bg-slate-950/70 text-lg text-primary";
 
         const primary = document.createElement("div");
         primary.className = "min-w-0";
 
         const title = document.createElement("p");
-        title.className = "truncate text-sm font-semibold";
+        title.className = "font-music-display truncate text-2xl leading-none text-white";
 
         const artist = document.createElement("p");
-        artist.className = "mt-1 truncate text-xs text-slate-400";
+        artist.className = "font-music-body mt-2 truncate text-sm text-slate-300";
+
+        const albumWrap = document.createElement("div");
+        albumWrap.className = "min-w-0";
+
+        const albumLabel = document.createElement("p");
+        albumLabel.className = "font-music-body text-[11px] uppercase tracking-[0.2em] text-slate-500";
+        albumLabel.textContent = "Album";
 
         const album = document.createElement("p");
-        album.className = "truncate text-sm text-slate-300";
+        album.className = "font-music-body mt-2 truncate text-sm text-slate-200";
+
+        const durationWrap = document.createElement("div");
+        durationWrap.className = "justify-self-start md:justify-self-end";
+
+        const durationLabel = document.createElement("p");
+        durationLabel.className = "font-music-body text-[11px] uppercase tracking-[0.2em] text-slate-500";
+        durationLabel.textContent = "Length";
 
         const duration = document.createElement("p");
-        duration.className = "text-xs font-semibold uppercase tracking-[0.18em] text-primary md:text-right";
+        duration.className = "font-music-display mt-2 text-2xl text-emerald-300 md:text-right";
 
         primary.append(title, artist);
-        row.append(primary, album, duration);
+        albumWrap.append(albumLabel, album);
+        durationWrap.append(durationLabel, duration);
+        row.append(rank, primary, albumWrap, durationWrap);
         host.appendChild(row);
       }
 
-      row.children[0].children[0].textContent = track?.title ?? "Untitled Track";
-      row.children[0].children[1].textContent = formatArtists(track);
-      row.children[1].textContent = formatAlbum(track);
-      row.children[2].textContent = formatDuration(track?.durationMs);
+      row.children[0].textContent = String(index + 1).padStart(2, "0");
+      row.children[1].children[0].textContent = track?.title ?? "Untitled Track";
+      row.children[1].children[1].textContent = formatArtists(track);
+      row.children[2].children[1].textContent = formatAlbum(track);
+      row.children[3].children[1].textContent = formatDuration(track?.durationMs);
     });
 
     host.hidden = !shouldShowResults;
+
+    const nextFingerprint = shouldShowResults
+      ? JSON.stringify(items.map((track) => [track?.id ?? "", track?.title ?? "", track?.durationMs ?? 0]))
+      : "";
+    if (nextFingerprint && nextFingerprint !== resultsFingerprint && window.gsap && !prefersReducedMotion()) {
+      resultsFingerprint = nextFingerprint;
+      const timeline = window.gsap.timeline({
+        defaults: { duration: 0.34, ease: "power2.out" },
+      });
+
+      timeline.fromTo(
+        host.children,
+        { autoAlpha: 0, y: 18, scale: 0.98 },
+        { autoAlpha: 1, y: 0, scale: 1, stagger: 0.045, clearProps: "transform,opacity,visibility" }
+      );
+    } else if (!nextFingerprint) {
+      resultsFingerprint = "";
+    }
   }
 
   function setStatusClass(status) {
@@ -533,7 +521,7 @@
     const palette = {
       idle: "border-white/10 bg-white/[0.04] text-slate-300",
       loading: "border-primary/20 bg-primary/10 text-primary",
-      results: "border-tertiary/20 bg-tertiary/10 text-tertiary",
+      results: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200",
       empty: "border-white/10 bg-white/[0.04] text-slate-300",
       playing: "border-secondary/20 bg-secondary/10 text-secondary",
       error: "border-red-400/20 bg-red-400/10 text-red-200",
@@ -550,18 +538,43 @@
       return;
     }
 
+    const leadTrack = state.currentTrack || state.results[0] || null;
+    const resultCount = state.results.length;
+    const hint = qs('[data-module="music-search-hint"]');
+
     setStatusClass(state.status);
     setText("musicSearchMessage", state.message || "Ready");
-    setText("musicCurrentTitle", state.results.length ? `${state.results.length} tracks ready` : "No results yet");
+    setText("musicCurrentTitle", resultCount ? `${resultCount} tracks ready` : "No results yet");
     setText("musicCurrentArtist", state.submittedQuery ? state.submittedQuery : "Waiting for search");
     setText(
       "musicCurrentAlbum",
-      state.submittedQuery ? (state.results.length ? "Library snapshot ready" : "Search completed with no results") : "No active search"
+      state.submittedQuery ? (resultCount ? "Library snapshot ready" : "Search completed with no results") : "No active search"
     );
+    setText("musicResultCount", String(resultCount).padStart(2, "0"));
+    setText(
+      "musicResultMeta",
+      state.submittedQuery ? (resultCount ? "Committed and ranked" : "Committed but empty") : "No committed request"
+    );
+    setText("musicLeadTitle", leadTrack?.title ?? "No lead track yet.");
+    setText(
+      "musicLeadMeta",
+      leadTrack
+        ? "Top-ranked result promoted into the spotlight summary."
+        : "Commit a query to promote the strongest result into this spotlight card."
+    );
+    setText("musicLeadArtist", leadTrack ? formatArtists(leadTrack) : "Standby");
+    setText("musicLeadAlbum", leadTrack ? formatAlbum(leadTrack) : "No album");
+    setText("musicLeadDuration", leadTrack ? formatDuration(leadTrack?.durationMs) : "--:--");
     setText(
       "musicLyrics",
-      state.error || "Lyrics and deep metadata stay readable here until the next live music endpoint lands."
+      state.error ||
+        state.lyricText ||
+        "Lyrics will appear here after a track is resolved. If the upstream service returns no lyric, this area stays readable."
     );
+
+    if (hint) {
+      hint.textContent = state.isSearching ? "Loading" : state.showSuggestions ? "Preview" : "Discover";
+    }
 
     const emptyMessage = state.error
       ? "Search failed. Try again when the music service is ready."
@@ -614,6 +627,25 @@
     return error?.name === "AbortError";
   }
 
+  async function resolveLyricForTrack(state, trackId, options = {}) {
+    if (!trackId) {
+      state.lyricText = "";
+      return;
+    }
+
+    try {
+      const payload = await fetchMusicLyric(trackId, options);
+      const data = payload?.data || {};
+      const lyric = typeof data.lyric === "string" ? data.lyric.trim() : "";
+      const translatedLyric = typeof data.translatedLyric === "string" ? data.translatedLyric.trim() : "";
+      state.lyricText = lyric || translatedLyric || "";
+    } catch (error) {
+      if (!isAbortError(error)) {
+        state.lyricText = "";
+      }
+    }
+  }
+
   function initMusicBrowser(state) {
     const form = qs('[data-module="music-search-form"]');
     const input = qs('[data-module="music-search-input"]');
@@ -631,6 +663,7 @@
 
     let requestToken = 0;
     let requestController = null;
+    let lyricRequestController = null;
     let lastSuggestQuery = "";
     let lastCommittedQuery = "";
     let lastSuggestResults = [];
@@ -649,51 +682,25 @@
 
       motionBound = true;
       qsa('[data-route-panel="music"] [data-motion="music-card"]').forEach((card, index) => {
-        const amplitude = 6 + (index % 3) * 1.5;
-        let idleTween = null;
-
-        const startIdle = () => {
-          if (idleTween) {
-            return;
-          }
-
-          idleTween = window.gsap.to(card, {
-            y: `+=${amplitude}`,
-            duration: 2.2 + index * 0.08,
-            ease: "sine.inOut",
-            repeat: -1,
-            yoyo: true,
-          });
-        };
-
-        const stopIdle = () => {
-          idleTween?.kill();
-          idleTween = null;
-          window.gsap.to(card, {
-            y: 0,
-            rotate: 0,
-            duration: 0.45,
-            ease: "power2.out",
-            overwrite: "auto",
-          });
-        };
-
         card.addEventListener("pointerenter", () => {
-          stopIdle();
           window.gsap.to(card, {
-            y: -8,
+            y: -6,
             rotate: index % 2 === 0 ? -0.35 : 0.35,
-            duration: 0.5,
+            duration: 0.28,
             ease: "power2.out",
             overwrite: "auto",
           });
         });
 
         card.addEventListener("pointerleave", () => {
-          startIdle();
+          window.gsap.to(card, {
+            y: 0,
+            rotate: 0,
+            duration: 0.24,
+            ease: "power2.out",
+            overwrite: "auto",
+          });
         });
-
-        startIdle();
       });
     }
 
@@ -715,6 +722,11 @@
       if (requestController) {
         requestController.abort();
         requestController = null;
+      }
+
+      if (lyricRequestController) {
+        lyricRequestController.abort();
+        lyricRequestController = null;
       }
 
       state.isSearching = false;
@@ -748,7 +760,7 @@
           return null;
         }
 
-        return Array.isArray(payload?.data?.results) ? sortByRelevance(payload.data.results, query) : [];
+        return Array.isArray(payload?.data?.results) ? payload.data.results : [];
       } catch (error) {
         if (token !== requestToken || isAbortError(error)) {
           return null;
@@ -828,6 +840,8 @@
         state.status = "idle";
         clearSuggestions();
         state.results = [];
+        state.currentTrack = null;
+        state.lyricText = "";
         state.submittedQuery = "";
         state.error = "";
         state.message = normalizedQuery
@@ -862,6 +876,8 @@
         state.submittedQuery = normalizedQuery;
         clearSuggestions();
         state.results = results;
+        state.currentTrack = results[0] || null;
+        state.lyricText = "";
         shouldFocusResults = results.length > 0;
         state.status = results.length ? "results" : "empty";
         state.message = results.length
@@ -870,6 +886,8 @@
       } catch (error) {
         clearSuggestions();
         state.results = [];
+        state.currentTrack = null;
+        state.lyricText = "";
         state.submittedQuery = normalizedQuery;
         state.status = "error";
         state.error = buildUiError(error, "Node music service is unavailable.");
@@ -878,6 +896,17 @@
       }
 
       renderMusicBrowser(state);
+      if (state.currentTrack?.id) {
+        if (lyricRequestController) {
+          lyricRequestController.abort();
+        }
+
+        lyricRequestController = new AbortController();
+        await resolveLyricForTrack(state, String(state.currentTrack.id), { signal: lyricRequestController.signal });
+        lyricRequestController = null;
+        renderMusicBrowser(state);
+      }
+
       window.requestAnimationFrame(() => {
         ensureVisibleWithinViewport(shouldFocusResults ? resultsHost : searchShell || form, {
           paddingTop: window.matchMedia(DESKTOP_MEDIA_QUERY).matches ? 28 : 12,

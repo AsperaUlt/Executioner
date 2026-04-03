@@ -1,5 +1,6 @@
 (function attachFileRenderer(global) {
   let quickAccessKey = "";
+  let accessDeckKey = "";
 
   function formatAccessTime(value) {
     if (!value) {
@@ -78,6 +79,49 @@
     renderQuickAccess(host, items);
   }
 
+  function renderAccessDeck(accessDeck) {
+    const items = Array.isArray(accessDeck?.items) ? accessDeck.items : [];
+    const buttons = document.querySelectorAll("[data-action$='-entry']");
+    if (!buttons.length) {
+      return;
+    }
+
+    const nextKey = JSON.stringify(
+      items.map((item) => [item?.id ?? "", item?.label ?? "", item?.href ?? "", item?.icon ?? "", item?.variant ?? "", item?.enabled ?? false])
+    );
+    if (accessDeckKey === nextKey) {
+      return;
+    }
+
+    accessDeckKey = nextKey;
+    const itemMap = new Map(items.map((item) => [item?.id, item]));
+
+    buttons.forEach((button) => {
+      const action = button.getAttribute("data-action") || "";
+      const id = action.replace("-entry", "");
+      const item = itemMap.get(id);
+      if (!item) {
+        return;
+      }
+
+      button.href = item.href || "#";
+      button.title = item.description || item.title || "";
+      button.setAttribute("aria-label", item.title || item.label || id);
+      button.toggleAttribute("aria-disabled", item.enabled === false);
+      button.classList.toggle("opacity-50", item.enabled === false);
+
+      const iconNode = button.querySelector(".material-symbols-outlined");
+      const labelNode = button.querySelector("span:last-child");
+      if (iconNode && item.icon) {
+        iconNode.textContent = item.icon;
+      }
+      if (labelNode && item.label) {
+        labelNode.textContent = item.label;
+      }
+    });
+  }
+
   global.VibeRenderers = global.VibeRenderers || {};
+  global.VibeRenderers.renderAccessDeck = renderAccessDeck;
   global.VibeRenderers.renderFiles = renderFiles;
 })(window);

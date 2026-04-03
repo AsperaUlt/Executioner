@@ -1,7 +1,10 @@
 #include "music_service.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <utility>
+#include <vector>
 
 #include <httplib.h>
 
@@ -49,6 +52,175 @@ std::string url_encode_component(const std::string& value) {
   }
 
   return encoded;
+}
+
+std::string normalize_search_text(const std::string& value) {
+  std::string normalized;
+  normalized.reserve(value.size());
+
+  bool previousWasSpace = true;
+  for (unsigned char ch : value) {
+    if (std::isspace(ch)) {
+      if (!previousWasSpace) {
+        normalized.push_back(' ');
+      }
+      previousWasSpace = true;
+      continue;
+    }
+
+    normalized.push_back(static_cast<char>(std::tolower(ch)));
+    previousWasSpace = false;
+  }
+
+  return trim_copy(std::move(normalized));
+}
+
+std::vector<std::string> split_terms(const std::string& value) {
+  std::vector<std::string> terms;
+  std::string current;
+
+  for (char ch : value) {
+    if (ch == ' ') {
+      if (!current.empty()) {
+        terms.push_back(current);
+        current.clear();
+      }
+      continue;
+    }
+
+    current.push_back(ch);
+  }
+
+  if (!current.empty()) {
+    terms.push_back(current);
+  }
+
+  return terms;
+}
+
+std::string artist_text_from_summary(const Json& track) {
+  if (track.contains("artistText") && track["artistText"].is_string()) {
+    return track.value("artistText", "Unknown Artist");
+  }
+
+  if (track.contains("artists") && track["artists"].is_array()) {
+    std::string combined;
+    for (const auto& artist : track["artists"]) {
+      const std::string name = artist.value("name", "");
+      if (name.empty()) {
+        continue;
+      }
+
+      if (!combined.empty()) {
+        combined += ' ';
+      }
+      combined += name;
+    }
+
+    if (!combined.empty()) {
+      return combined;
+    }
+  }
+
+  return "Unknown Artist";
+}
+
+std::string album_text_from_summary(const Json& track) {
+  if (track.contains("album") && track["album"].is_object()) {
+    return track["album"].value("name", "Unknown Album");
+  }
+
+  return "Unknown Album";
+}
+
+int score_text_match(const std::string& query, const std::string& value, int exactScore, int prefixScore, int includesScore) {
+  if (query.empty() || value.empty()) {
+    return 0;
+  }
+
+  if (value == query) {
+    return exactScore;
+  }
+
+  if (value.rfind(query, 0) == 0) {
+    return prefixScore;
+  }
+
+  if (value.find(query) != std::string::npos) {
+    return includesScore;
+  }
+
+  return 0;
+}
+
+double score_track_for_query(const std::string& query, const std::vector<std::string>& queryTerms, const Json& track) {
+  const std::string normalizedTitle = normalize_search_text(track.value("title", ""));
+  const std::string normalizedArtist = normalize_search_text(artist_text_from_summary(track));
+  const std::string normalizedAlbum = normalize_search_text(album_text_from_summary(track));
+
+  double score = 0.0;
+  score += score_text_match(query, normalizedTitle, 1400, 980, 620);
+  score += score_text_match(query, normalizedArtist, 560, 380, 220);
+  score += score_text_match(query, normalizedAlbum, 260, 180, 120);
+
+  for (const auto& term : queryTerms) {
+    score += score_text_match(term, normalizedTitle, 180, 120, 60);
+    score += score_text_match(term, normalizedArtist, 90, 60, 35);
+    score += score_text_match(term, normalizedAlbum, 50, 35, 20);
+  }
+
+  if (!normalizedTitle.empty() && normalizedTitle.size() < query.size()) {
+    score -= 40;
+  }
+
+  if (normalizedTitle.size() > query.size()) {
+    score -= std::min<double>(normalizedTitle.size() - query.size(), 48.0);
+  }
+
+  const int durationMs = track.value("durationMs", 0);
+  if (durationMs > 0) {
+    score -= std::min(durationMs / 12000.0, 18.0);
+  }
+
+  return score;
+}
+
+Json rerank_results(Json results, const std::string& query) {
+  if (!results.is_array() || results.empty()) {
+    return results;
+  }
+
+  const std::string normalizedQuery = normalize_search_text(query);
+  if (normalizedQuery.empty()) {
+    return results;
+  }
+
+  const auto queryTerms = split_terms(normalizedQuery);
+  struct ScoredTrack {
+    Json track;
+    double score = 0.0;
+    std::size_t index = 0;
+  };
+
+  std::vector<ScoredTrack> scoredTracks;
+  scoredTracks.reserve(results.size());
+  for (std::size_t index = 0; index < results.size(); ++index) {
+    scoredTracks.push_back({results[index], score_track_for_query(normalizedQuery, queryTerms, results[index]), index});
+  }
+
+  std::stable_sort(scoredTracks.begin(), scoredTracks.end(), [](const ScoredTrack& left, const ScoredTrack& right) {
+    if (left.score != right.score) {
+      return left.score > right.score;
+    }
+    return left.index < right.index;
+  });
+
+  Json reranked = Json::array();
+  for (auto& entry : scoredTracks) {
+    reranked.push_back(std::move(entry.track));
+  }
+
+  return reranked;
 }
 
 Json json_object_or_empty(const Json& value, const char* key) {
@@ -148,8 +320,70 @@ MusicServiceResult MusicService::search_tracks(const std::string& query) const {
   }
 
   MusicServiceResult result = upstream;
-  result.data = normalize_search_payload(upstream.data);
+  result.data = normalize_search_payload(upstream.data, query);
   result.message = result.data["results"].empty() ? "No tracks found" : "Search completed";
+  return result;
+}
+
+MusicServiceResult MusicService::lyric_by_track_id(const std::string& trackId) const {
+  const auto upstream = request_json("/api/music/lyric", "/lyric?id=" + url_encode_component(trackId));
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  result.data = normalize_lyric_payload(upstream.data, trackId);
+  result.message = result.data.value("hasLyric", false) ? "Lyric loaded" : "No lyric available";
+  return result;
+}
+
+MusicServiceResult MusicService::login_with_email(const std::string& email, const std::string& password) const {
+  const auto upstream =
+      request_json("/api/music-account-email",
+                   "/login?email=" + url_encode_component(email) + "&password=" + url_encode_component(password));
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  result.data = normalize_login_payload(upstream.data);
+  result.message = result.data.value("hasCookie", false) ? "Login succeeded" : "Login completed";
+  return result;
+}
+
+MusicServiceResult MusicService::login_with_cellphone(const std::string& phone,
+                                                      const std::string& password,
+                                                      const std::string& countryCode) const {
+  std::string path = "/login/cellphone?phone=" + url_encode_component(phone) + "&password=" + url_encode_component(password);
+  if (!trim_copy(countryCode).empty()) {
+    path += "&countrycode=" + url_encode_component(countryCode);
+  }
+
+  const auto upstream = request_json("/api/music-account-cellphone", path);
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  result.data = normalize_login_payload(upstream.data);
+  result.message = result.data.value("hasCookie", false) ? "Login succeeded" : "Login completed";
+  return result;
+}
+
+MusicServiceResult MusicService::login_status(const std::string& cookie) const {
+  std::string path = "/login/status";
+  if (!trim_copy(cookie).empty()) {
+    path += "?cookie=" + url_encode_component(cookie);
+  }
+
+  const auto upstream = request_json("/api/music-account-status", path);
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  result.data = normalize_login_status_payload(upstream.data);
+  result.message = result.data.value("loggedIn", false) ? "Login active" : "Not logged in";
   return result;
 }
 
@@ -259,11 +493,12 @@ Json MusicService::normalize_health_payload(const Json& upstream) {
   };
 }
 
-Json MusicService::normalize_search_payload(const Json& upstream) {
+Json MusicService::normalize_search_payload(const Json& upstream, const std::string& query) {
   if (upstream.contains("results") && upstream["results"].is_array()) {
+    Json results = rerank_results(upstream["results"], query);
     return {
-        {"query", upstream.value("query", "")},
-        {"results", upstream["results"]},
+        {"query", upstream.value("query", query)},
+        {"results", std::move(results)},
         {"total", upstream.value("total", static_cast<int>(upstream["results"].size()))},
     };
   }
@@ -275,10 +510,59 @@ Json MusicService::normalize_search_payload(const Json& upstream) {
     results.push_back(build_track_summary(song));
   }
 
+  results = rerank_results(std::move(results), query);
+  const int total = result.value("songCount", static_cast<int>(results.size()));
+
   return {
-      {"query", result.value("queryCorrected", "")},
-      {"results", results},
-      {"total", result.value("songCount", static_cast<int>(results.size()))},
+      {"query", result.value("queryCorrected", query)},
+      {"results", std::move(results)},
+      {"total", total},
+  };
+}
+
+Json MusicService::normalize_lyric_payload(const Json& upstream, const std::string& trackId) {
+  const Json lrc = json_object_or_empty(upstream, "lrc");
+  const Json tlyric = json_object_or_empty(upstream, "tlyric");
+  const std::string lyric = lrc.value("lyric", "");
+  const std::string translatedLyric = tlyric.value("lyric", "");
+
+  return {
+      {"trackId", trackId},
+      {"lyric", lyric},
+      {"translatedLyric", translatedLyric},
+      {"hasLyric", !trim_copy(lyric).empty()},
+  };
+}
+
+Json MusicService::normalize_login_payload(const Json& upstream) {
+  const Json account = json_object_or_empty(upstream, "account");
+  const Json profile = json_object_or_empty(upstream, "profile");
+  const std::string cookie = upstream.value("cookie", "");
+
+  return {
+      {"code", upstream.value("code", 0)},
+      {"accountId", account.value("id", 0)},
+      {"userId", account.value("id", profile.value("userId", 0))},
+      {"nickname", profile.value("nickname", "")},
+      {"avatarUrl", profile.value("avatarUrl", "")},
+      {"cookie", cookie},
+      {"hasCookie", !trim_copy(cookie).empty()},
+  };
+}
+
+Json MusicService::normalize_login_status_payload(const Json& upstream) {
+  const Json data = json_object_or_empty(upstream, "data");
+  const Json account = json_object_or_empty(data, "account");
+  const Json profile = json_object_or_empty(data, "profile");
+  const bool loggedIn = !account.empty() || !profile.empty();
+
+  return {
+      {"code", upstream.value("code", 0)},
+      {"loggedIn", loggedIn},
+      {"accountId", account.value("id", 0)},
+      {"userId", account.value("id", profile.value("userId", 0))},
+      {"nickname", profile.value("nickname", "")},
+      {"avatarUrl", profile.value("avatarUrl", "")},
   };
 }
 

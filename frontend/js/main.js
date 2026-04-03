@@ -1,7 +1,8 @@
 (function bootApp(global) {
   const { fetchAllData } = global.VibeApi;
   const { createState, mergeData } = global.VibeState;
-  const { initMusicBrowser, initTasks, renderFiles, renderMusic, renderMusicBrowser, renderStats, renderTasks } = global.VibeRenderers;
+  const { initAccessDeck, initMusicBrowser, initTasks, renderAccessDeck, renderFiles, renderMusic, renderMusicBrowser, renderStats, renderTasks } =
+    global.VibeRenderers;
 
   const state = createState();
   let initialized = false;
@@ -59,6 +60,7 @@
 
   function renderAll() {
     renderStats(state.summary, state.stats);
+    renderAccessDeck(state.accessDeck);
     renderTasks(state);
     renderFiles(state.quickAccess);
     renderMusic(state.music);
@@ -67,6 +69,24 @@
 
   function prefersReducedMotion() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function syncFooterOffset() {
+    const root = document.documentElement;
+    const footer = document.querySelector(".app-footer");
+    if (!root || !footer) {
+      return;
+    }
+
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (!isDesktop) {
+      root.style.setProperty("--app-footer-offset", "0.75rem");
+      return;
+    }
+
+    const footerHeight = Math.ceil(footer.getBoundingClientRect().height);
+    const bottomGap = 16;
+    root.style.setProperty("--app-footer-offset", `${footerHeight + bottomGap}px`);
   }
 
   function animateRoutePanel(route) {
@@ -196,6 +216,26 @@
     document.querySelector('[data-action="refresh"]')?.addEventListener("click", throttledRefresh);
   }
 
+  function bindLayoutSync() {
+    const footer = document.querySelector(".app-footer");
+    if (!footer) {
+      return;
+    }
+
+    syncFooterOffset();
+    const throttledSyncFooterOffset = throttle(syncFooterOffset, 80);
+
+    if (typeof window.ResizeObserver === "function") {
+      const resizeObserver = new window.ResizeObserver(() => {
+        throttledSyncFooterOffset();
+      });
+      resizeObserver.observe(footer);
+    }
+
+    window.addEventListener("resize", throttledSyncFooterOffset, { passive: true });
+    window.addEventListener("orientationchange", throttledSyncFooterOffset, { passive: true });
+  }
+
   function initBackgroundFx() {
     const canvas = document.getElementById("fx-canvas");
     if (!canvas) {
@@ -300,6 +340,8 @@
     initialized = true;
     bindNavigation();
     bindUiActions();
+    bindLayoutSync();
+    initAccessDeck();
     initMusicBrowser(state.musicBrowser);
     initTasks(state, loadAndRender);
     initBackgroundFx();

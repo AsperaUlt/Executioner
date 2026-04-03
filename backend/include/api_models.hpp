@@ -9,6 +9,7 @@ using Json = nlohmann::json;
 struct ApiPayload {
   Json summary;
   Json stats;
+  Json accessDeck;
   Json tasks;
   Json taskStream;
   Json quickAccess;

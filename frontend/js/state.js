@@ -13,6 +13,9 @@
       deepWorkHours: [],
       insights: [],
     },
+    accessDeck: {
+      items: [],
+    },
     tasks: [],
     taskCurrent: null,
     taskNext: null,
@@ -67,6 +70,7 @@
       ...payload,
       summary: { ...state.summary, ...payload.summary },
       stats: { ...state.stats, ...payload.stats },
+      accessDeck: { ...state.accessDeck, ...payload.accessDeck },
       taskCompleted: { ...state.taskCompleted, ...payload.taskCompleted },
       taskStream: { ...state.taskStream, ...payload.taskStream },
       quickAccess: { ...state.quickAccess, ...payload.quickAccess },
