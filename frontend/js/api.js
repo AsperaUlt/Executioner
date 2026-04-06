@@ -119,28 +119,61 @@
     return fetchApiEnvelope(`/api/music/lyric?${buildQuery({ id: trackId })}`, options);
   }
 
-  function fetchLoginStatus(cookie, options = {}) {
-    return fetchApiEnvelope(`/api/music-account-status?${buildQuery({ cookie })}`, options);
+  function fetchLoginStatus(options = {}) {
+    return fetchApiEnvelope("/api/login/status", options);
   }
 
-  function loginWithEmail(payload) {
-    return fetchApiEnvelope("/api/music-account-email", {
+  function createQrLoginKey(options = {}) {
+    return fetchApiEnvelope("/api/login/qr/key", options);
+  }
+
+  function createQrLoginImage(key, options = {}) {
+    return fetchApiEnvelope(`/api/login/qr/create?${buildQuery({ key })}`, options);
+  }
+
+  function checkQrLogin(key, options = {}) {
+    return fetchApiEnvelope(`/api/login/qr/check?${buildQuery({ key })}`, options);
+  }
+
+  function commitQrLogin(key) {
+    return fetchApiEnvelope("/api/login/qr/commit", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ key }),
     });
   }
 
   function loginWithCellphone(payload) {
-    return fetchApiEnvelope("/api/music-account-cellphone", {
+    return fetchApiEnvelope("/api/login/cellphone", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
+  }
+
+  function sendCellphoneLoginCode(payload) {
+    return fetchApiEnvelope("/api/captcha/sent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  function logout(options = {}) {
+    return fetchApiEnvelope("/api/logout", {
+      method: "POST",
+      ...options,
+    });
+  }
+
+  function fetchLogStatus(options = {}) {
+    return fetchApiEnvelope("/api/logstatus", options);
   }
 
   function fetchMusicQueue(options = {}) {
@@ -150,16 +183,22 @@
   global.VibeApi = {
     completeTask,
     createTask,
+    createQrLoginImage,
+    createQrLoginKey,
+    checkQrLogin,
+    commitQrLogin,
     fetchAllData,
     fetchApiEnvelope,
     fetchLoginStatus,
+    fetchLogStatus,
     fetchJson,
     fetchMusicHealth,
     fetchMusicLyric,
     fetchMusicQueue,
     getApiBase,
     loginWithCellphone,
-    loginWithEmail,
+    logout,
+    sendCellphoneLoginCode,
     searchMusic,
   };
 })(window);

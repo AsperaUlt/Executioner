@@ -400,7 +400,7 @@
       row.classList.toggle("border-primary/30", state.activeSuggestionIndex === index);
       row.classList.toggle("bg-white/[0.06]", state.activeSuggestionIndex === index);
       row.children[0].children[0].textContent = track?.title ?? "Untitled Track";
-      row.children[0].children[1].textContent = `${formatArtists(track)} · ${formatAlbum(track)}`;
+      row.children[0].children[1].textContent = `${formatArtists(track)} | ${formatAlbum(track)}`;
     });
 
     if (label) {
@@ -545,22 +545,22 @@
     setStatusClass(state.status);
     setText("musicSearchMessage", state.message || "Ready");
     setText("musicCurrentTitle", resultCount ? `${resultCount} tracks ready` : "No results yet");
-    setText("musicCurrentArtist", state.submittedQuery ? state.submittedQuery : "Waiting for search");
+    setText("musicCurrentArtist", state.submittedQuery ? state.submittedQuery : "Idle");
     setText(
       "musicCurrentAlbum",
-      state.submittedQuery ? (resultCount ? "Library snapshot ready" : "Search completed with no results") : "No active search"
+      state.submittedQuery ? (resultCount ? "Results loaded" : "No matches found") : "No active search"
     );
     setText("musicResultCount", String(resultCount).padStart(2, "0"));
     setText(
       "musicResultMeta",
-      state.submittedQuery ? (resultCount ? "Committed and ranked" : "Committed but empty") : "No committed request"
+      state.submittedQuery ? (resultCount ? "Saved and ranked" : "Saved with no matches") : "No saved query"
     );
     setText("musicLeadTitle", leadTrack?.title ?? "No lead track yet.");
     setText(
       "musicLeadMeta",
       leadTrack
-        ? "Top-ranked result promoted into the spotlight summary."
-        : "Commit a query to promote the strongest result into this spotlight card."
+        ? "Top result."
+        : "Your top result appears here."
     );
     setText("musicLeadArtist", leadTrack ? formatArtists(leadTrack) : "Standby");
     setText("musicLeadAlbum", leadTrack ? formatAlbum(leadTrack) : "No album");
@@ -569,7 +569,7 @@
       "musicLyrics",
       state.error ||
         state.lyricText ||
-        "Lyrics will appear here after a track is resolved. If the upstream service returns no lyric, this area stays readable."
+        "Lyrics appear here when available."
     );
 
     if (hint) {
@@ -579,16 +579,16 @@
     const emptyMessage = state.error
       ? "Search failed. Try again when the music service is ready."
       : state.query && state.query.length < MIN_SEARCH_LENGTH
-        ? `Enter at least ${MIN_SEARCH_LENGTH} characters to search tracks.`
+        ? `Enter at least ${MIN_SEARCH_LENGTH} characters.`
         : state.isSuggesting
           ? "Collecting ranked suggestions..."
           : state.showSuggestions
-            ? "Choose a suggestion or press Enter to load the full list."
+            ? "Choose a suggestion or press Enter."
             : state.isSearching
               ? "Searching the music service..."
               : state.submittedQuery
-                ? "No results returned by the music service."
-                : "Search songs, artists, or albums to open the Music workspace.";
+                ? "No results returned."
+                : "Search songs, artists, or albums.";
     setText("musicEmptyState", emptyMessage);
 
     const errorBox = qs('[data-module="music-error"]');
@@ -600,7 +600,7 @@
     const loadingBox = qs('[data-module="music-loading"]');
     if (loadingBox) {
       loadingBox.hidden = !(state.isSearching || state.isSuggesting);
-      loadingBox.textContent = state.isSearching ? "Loading full results..." : "Refreshing suggestions...";
+      loadingBox.textContent = state.isSearching ? "Loading results..." : "Refreshing suggestions...";
     }
 
     const emptyBox = qs('[data-module="music-empty"]');
@@ -791,8 +791,8 @@
         lastSuggestQuery = "";
         lastSuggestResults = [];
         state.message = normalizedQuery
-          ? `Enter at least ${MIN_SEARCH_LENGTH} characters to search tracks.`
-          : "Type a keyword, then press Enter or click Search.";
+          ? `Enter at least ${MIN_SEARCH_LENGTH} characters.`
+          : "Type a keyword, then press Enter or Search.";
         renderMusicBrowser(state);
         return;
       }
@@ -815,8 +815,8 @@
         state.activeSuggestionIndex = state.suggestions.length ? 0 : -1;
         state.status = state.results.length ? "results" : "idle";
         state.message = state.suggestions.length
-          ? "Choose a suggestion or press Enter to load the full list."
-          : "No close matches. Press Search to try a broader query.";
+          ? "Choose a suggestion or press Enter."
+          : "No close matches. Try Search.";
       } catch (error) {
         clearSuggestions();
         state.status = "error";
@@ -845,8 +845,8 @@
         state.submittedQuery = "";
         state.error = "";
         state.message = normalizedQuery
-          ? `Enter at least ${MIN_SEARCH_LENGTH} characters to search tracks.`
-          : "Type a keyword, then press Enter or click Search.";
+          ? `Enter at least ${MIN_SEARCH_LENGTH} characters.`
+          : "Type a keyword, then press Enter or Search.";
         renderMusicBrowser(state);
         return;
       }
@@ -854,7 +854,7 @@
       clearSuggestions();
 
       if (normalizedQuery === lastCommittedQuery && state.results.length) {
-        state.message = `Showing ${state.results.length} tracks for "${normalizedQuery}".`;
+        state.message = `${state.results.length} tracks for "${normalizedQuery}".`;
         renderMusicBrowser(state);
         return;
       }
@@ -881,8 +881,8 @@
         shouldFocusResults = results.length > 0;
         state.status = results.length ? "results" : "empty";
         state.message = results.length
-          ? `Showing ${results.length} tracks for "${normalizedQuery}".`
-          : `No results returned for "${normalizedQuery}".`;
+          ? `${results.length} tracks for "${normalizedQuery}".`
+          : `No results for "${normalizedQuery}".`;
       } catch (error) {
         clearSuggestions();
         state.results = [];

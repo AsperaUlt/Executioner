@@ -262,7 +262,7 @@
     }
 
     const hasError = Boolean(taskUi?.error);
-    const message = hasError ? taskUi.error : taskUi?.message || "Create a task to update the execution queue.";
+    const message = hasError ? taskUi.error : taskUi?.message || "Add a task to update the queue.";
 
     node.className =
       "mt-4 rounded-[1.4rem] border px-4 py-3 text-sm " +

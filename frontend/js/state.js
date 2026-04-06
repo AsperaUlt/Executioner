@@ -27,7 +27,7 @@
     },
     taskUi: {
       status: "idle",
-      message: "Create a task to update the execution queue.",
+      message: "Add a task to update the queue.",
       error: "",
     },
     quickAccess: {
@@ -49,7 +49,7 @@
       playbackUrl: "",
       lyricText: "",
       error: "",
-      message: "Search for a track to open the Music workspace.",
+      message: "Type a track, artist, or album to load results.",
       isSearching: false,
       isSuggesting: false,
       isResolving: false,

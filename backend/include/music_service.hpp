@@ -25,14 +25,21 @@ class MusicService {
   MusicServiceResult health() const;
   MusicServiceResult search_tracks(const std::string& query) const;
   MusicServiceResult lyric_by_track_id(const std::string& trackId) const;
-  MusicServiceResult login_with_email(const std::string& email, const std::string& password) const;
-  MusicServiceResult login_with_cellphone(const std::string& phone,
-                                          const std::string& password,
-                                          const std::string& countryCode = "") const;
+  MusicServiceResult create_qr_login_key() const;
+  MusicServiceResult create_qr_login_image(const std::string& key) const;
+  MusicServiceResult check_qr_login(const std::string& key) const;
+  MusicServiceResult send_cellphone_login_code(const std::string& phone, const std::string& countryCode = "") const;
+  MusicServiceResult login_with_cellphone_code(const std::string& phone,
+                                               const std::string& captcha,
+                                               const std::string& countryCode = "") const;
   MusicServiceResult login_status(const std::string& cookie = "") const;
+  MusicServiceResult logout(const std::string& cookie = "") const;
 
  private:
   MusicServiceResult request_json(const std::string& vibeRoute, const std::string& upstreamPath) const;
+  MusicServiceResult request_json_post_form(const std::string& vibeRoute,
+                                            const std::string& upstreamPath,
+                                            const Json& formData) const;
   static MusicServiceResult make_error(int httpStatus,
                                        std::string error,
                                        std::string message,

@@ -4,218 +4,162 @@
 
 - 项目名称：VIBE
 - 形态：本地桌面风格 Web 应用
-- 运行方式：前端由 C++ 后端静态托管，前后端通过同源 `/api/...` 通信
+- 运行方式：C++ 后端托管前端静态资源，前后端通过同源 `/api/...` 通信
 - 当前主入口：`http://127.0.0.1:18080/`
 - 当前前端入口文件：[frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
 - 当前后端入口文件：[backend/src/main.cpp](/F:/LLM/VIBE/backend/src/main.cpp)
-- 状态更新时间：2026-04-03
+- 状态更新时间：2026-04-04
 
 ## 当前阶段结论
 
-- 项目主骨架已稳定为“后端托管前端资源 + 同源 API + 单页路由切换”的结构。
-- 前端主链路已经从 `Audio` 统一迁移到 `Music`，并保留旧 `#audio` 到 `#music` 的兼容跳转。
-- 本轮已完成 Music 链路收口、搜索体验后端化、歌词接口接入、Access Deck 顶栏与弹层扩展。
-- 当前阶段重点已经从“纯前端重构”进入“功能补齐 + 交互验收 + 命名/结构清理”的阶段。
-- 下一阶段目标不再只是打磨搜索 UI，而是开始补音乐模块基础功能，例如日推等入口能力。
+- 项目仍保持“后端托管前端 + 同源 API + 单页切换”的主架构。
+- Access Deck 登录链路已从“占位式前端登录”推进到“后端托管、同源会话驱动”的真实接入阶段。
+- 登录状态、登出、二维码登录、手机号验证码登录的核心后端接口已接通，并完成多轮状态一致性修复。
+- 当前下一阶段目标已明确收敛为两项：
+  - 完成登录状态搭建与浏览器端稳定回归
+  - 完成日推歌曲显示
 
-## 本轮已完成
+## 今日完成
 
-### 1. Music 链路与页面结构收口
+### 1. 登录体系从前端占位切换为后端会话托管
 
-- Music 页已删除旧 `Search Snapshot` 和 `Playback` 区块。
-- 查询状态已并入 `Music Atlas` 主区，页面主叙事集中到搜索、结果、歌词和队列。
-- `Daily Playlist`、`Lyrics`、`Next Queue` 的区块比例已重排，Music 页整体更紧凑。
-- 底部异常留白已处理，改为由 footer 高度驱动的自适应占位。
-- 所有页面共享的右侧主滚动条已隐藏，但保留滚动能力。
+- 登录成功后统一由后端写入 `HttpOnly` 的 `vibe_music_session`
+- 前端不再自行保存上游 cookie
+- 登录状态判定从“前端假定”切换为“本地 session 优先”的后端判断逻辑
 
-### 2. Music 搜索体验后端化
+### 2. 已完成的后端能力
 
-- 后端搜索结果已增加二次重排逻辑。
-- 当前排序规则已按标题 / 歌手 / 专辑的精确命中、前缀命中、包含命中、分词命中进行评分。
-- 前端本地排序逻辑已删除，直接消费后端返回顺序。
-- 前端仍保留“输入阶段展示 suggestions，提交后展示完整结果”的交互规则。
+- 本地会话型登录状态查询与登出：
+  - `/api/login/status`
+  - `/api/logstatus`
+  - `/api/logout`
+- 手机号验证码登录链路：
+  - 发码：`/api/captcha/sent`
+  - 验证码登录：`/api/login/cellphone`
+- 二维码登录链路：
+  - `/api/login/qr/key`
+  - `/api/login/qr/create`
+  - `/api/login/qr/check`
+  - `/api/login/qr/commit`
+- 邮箱登录已从主流程移除，不再作为当前主入口
 
-### 3. 歌词接口接入
+### 3. 已完成的前端行为
 
-- 后端新增歌词接口：`/api/music/lyric?id=...`
-- 前端 Lyrics 区已在提交搜索后，对首个结果拉取真实歌词并展示。
-- 当前歌词区在接口失败或无歌词时，仍保持可读的 fallback 文案。
+- Login 弹层已切换为两种真实登录方式：
+  - `QR Code`
+  - `Cellphone`
+- 手机登录已改成“发送验证码 + 输入验证码登录”
+- 会话操作按钮已保留并可见：
+  - `Check Status`
+  - `Logout`
+- 二维码区域已支持：
+  - 自动生成二维码
+  - 手动刷新二维码
+  - 轮询扫码状态
+  - 状态文本实时展示
 
-### 4. Access Deck 与全局入口扩展
+### 4. 今天重点修掉的问题
 
-- 后端新增 `Access Deck` 数据接口：`/api/access/deck`
-- 顶栏右上角已从本地端口展示改为 `Login` / `Help` 两个入口。
-- 共享头部 panel 的语义已从 `Control Surface` 调整为 `Access Deck`。
-- `Login / Help` 按钮已由后端配置驱动，而不是纯前端硬编码。
+- `logout` 后再查 `status` 仍显示 `Session is active`
+  - 原因：没有本地 cookie 时仍继续查上游状态
+  - 结果：已改为“本地 session 优先”，没有本地 cookie 直接返回 `loggedIn: false`
+- 刷新二维码或登出后，旧轮询请求仍可能把 session 写回来
+  - 结果：已拆分为：
+    - `qr/check` 只查状态，不写 cookie
+    - `qr/commit` 才真正提交登录并写入本地 session
+  - 前端已增加二维码代际控制，旧二维码轮询结果不会污染当前状态
+- 二维码状态提示不够真实
+  - 结果：当前已直接透传上游 `message/code`
+  - 用户可见状态更接近真实流程，例如等待扫码、待确认、已过期、已授权
 
-### 5. Login / Help 弹层
+## 当前验证结果
 
-- 已新增 [frontend/js/renderers/access.js](/F:/LLM/VIBE/frontend/js/renderers/access.js)
-- Login 弹层已支持两种表单：
-  - Email 登录
-  - Cellphone 登录
-- Login 弹层已具备：
-  - 打开 / 关闭
-  - Tab 切换
-  - `Escape` 关闭
-  - 登录反馈区
-  - 登录状态展示
-- Help 弹层已加入：
-  - 项目仓库外链：`https://github.com/AsperaUlt/Executioner`
-  - 明确标记 `DO NOT DELETE` 的个人网站占位区
+- 前端相关 JS `node --check` 通过
+- Debug 后端构建通过
+- 新增登录 / 状态 / 登出 / 二维码相关路由已在新编译后的后端上验证存在
+- `logout -> status` 链路已验证返回 `loggedIn: false`
 
-### 6. Login 弹层动效
-
-- Login 弹层已加入 GSAP 开合动画。
-- 已先完成基础开合动画，再升级为 timeline 版本。
-- 当前开启动画包含：
-  - 遮罩淡入
-  - 主卡轻微弹性落位
-  - 标题、tab、表单与侧栏信息分段入场
-- 已保留 `prefers-reduced-motion` 分支，减少动画模式下不强行动效。
-
-### 7. 全站视觉语言同步
-
-- Music 页的新设计语言已同步到 `home / tasks / insights` 页面。
-- 当前全站已统一为更高对比、块状分层、圆角大卡片的视觉方向。
-- 共享壳层、标题体系和局部卡片材质已统一到同一套样式命名。
-
-## 本轮主要改动文件
+## 今日涉及的核心文件
 
 - 后端：
-  - [backend/include/music_service.hpp](/F:/LLM/VIBE/backend/include/music_service.hpp)
-  - [backend/src/music_service.cpp](/F:/LLM/VIBE/backend/src/music_service.cpp)
   - [backend/src/router.cpp](/F:/LLM/VIBE/backend/src/router.cpp)
-  - [backend/include/api_models.hpp](/F:/LLM/VIBE/backend/include/api_models.hpp)
-  - [backend/src/data_provider.cpp](/F:/LLM/VIBE/backend/src/data_provider.cpp)
+  - [backend/src/music_service.cpp](/F:/LLM/VIBE/backend/src/music_service.cpp)
+  - [backend/include/music_service.hpp](/F:/LLM/VIBE/backend/include/music_service.hpp)
 - 前端：
-  - [frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
   - [frontend/js/api.js](/F:/LLM/VIBE/frontend/js/api.js)
-  - [frontend/js/state.js](/F:/LLM/VIBE/frontend/js/state.js)
-  - [frontend/js/main.js](/F:/LLM/VIBE/frontend/js/main.js)
-  - [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)
-  - [frontend/js/renderers/files.js](/F:/LLM/VIBE/frontend/js/renderers/files.js)
   - [frontend/js/renderers/access.js](/F:/LLM/VIBE/frontend/js/renderers/access.js)
-- 其他：
-  - [build_project.bat](/F:/LLM/VIBE/build_project.bat)
-  - [generate_project.bat](/F:/LLM/VIBE/generate_project.bat)
+  - [frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
 
-## 已完成验证
+## 当前重点风险 / 遗留
 
-- 语法检查通过：
-  - `node --check frontend/js/api.js`
-  - `node --check frontend/js/main.js`
-  - `node --check frontend/js/state.js`
-  - `node --check frontend/js/renderers/music.js`
-  - `node --check frontend/js/renderers/files.js`
-  - `node --check frontend/js/renderers/access.js`
-- 构建验证：
-  - `cmake --build backend/build --config Debug` 通过
-- 接口验证：
-  - `/api/music/search?q=test` 正常
-  - `/api/music/lyric?id=123` 正常
-  - `/api/access/deck` 正常
-- 页面级静态确认：
-  - Login 弹层 DOM、Help 弹层 DOM、Access Deck 顶栏入口均已接入页面
-  - Login 弹层 GSAP timeline 动画脚本已通过语法检查
+### 1. 浏览器端仍需完整回归登录链路
 
-## 当前阻塞 / 遗留
+- 需要在真实浏览器里完整走一遍：
+  - QR 登录
+  - 手机验证码登录
+  - Logout 后立刻查 Status
+  - 刷新二维码后旧二维码是否彻底失效
+- 需要继续观察二维码状态卡是否准确反映上游 `message`
 
-### 1. 登录新路由运行时仍有 404 风险
+### 2. 运行中的后端版本仍有混淆风险
 
-- 当前状态需要区分“代码已写好”和“运行时已完全打通”：
-  - Login 弹层 UI 已完成
-  - 基础登录 API 调用层已完成
-  - 但根据本轮反馈，新增登录路由在运行时仍返回 `404`
-- 已知现象：
-  - `/api/music/...` 相关路由正常
-  - `/api/access/deck` 正常
-  - 登录相关新路由运行时未完全跑通
-- 这说明后续需要优先验证路由注册 / 匹配 / 实际运行版本，而不是继续改前端表单本身。
+- 之前多次出现旧进程仍占用 `18080`
+- 这会造成“路由看起来没生效，但实际是旧进程还在跑”的假象
+- 仍需继续确认当前运行的始终是最新的 `backend/build/Debug/vibe_backend.exe`
 
-### 2. 命名债务仍未完全清理
+### 3. 登录语义日志仍可继续整理
 
-- 后端仍残留 `audio` 相关命名与配置引用。
-- 前端 router 中仍保留 `#audio -> #music` 的兼容逻辑。
-- 文档和代码中的品牌/命名仍存在一定不一致，例如：
-  - `Executioner`
-  - `Unified Mission Console`
-  - `Access Deck`
-- 这些不会立即阻塞功能，但会影响后续可读性和指令部署。
+- 当前 `outcome=success` 一类日志语义仍可能混淆“传输成功”和“鉴权成功”
+- 如需后续排障更清晰，可继续把日志拆成“传输成功 / 鉴权状态分离”的语义
 
-### 3. 浏览器级完整验收尚未完成
+### 4. 二维码登录文档仍为空
 
-- 当前已完成代码级、接口级、局部交互级确认。
-- 尚未完成完整浏览器自动化回归。
-- 仍需人工或自动化继续确认：
-  - Music 页底部留白是否已完全消失
-  - `Daily Playlist / Lyrics / Next Queue` 新比例是否自然
-  - 后端二次重排后的搜索建议是否符合预期
-  - 首条结果歌词是否稳定显示
-  - Login / Help 弹层的开关与动画在实际浏览器中是否符合预期
+- [api/QRcode_login .md](/F:/LLM/VIBE/api/QRcode_login%20.md) 当前仍为空文件
+- 现阶段二维码登录实现是按上游既有 QR 登录接口做的回退接入
+- 不是基于该文件的细化规范实现
 
 ## 当前验收边界
 
 - 已完成：
-  - Music 主链路收口
-  - 歌词接口接入
-  - 搜索排序后端化
-  - Access Deck 顶栏与弹层框架
-  - 登录 / 帮助弹层基础交互
-  - Login GSAP timeline 动画
-  - 全站视觉同步
+  - Access Deck 登录链路真实接入
+  - 本地 session 驱动的登录状态查询
+  - 登出链路
+  - 手机验证码登录
+  - 二维码登录基础链路
+  - 登录状态一致性修复
 - 尚未完成：
-  - 登录请求运行时全链路打通
-  - 日推等音乐基础功能
-  - 完整浏览器自动化回归
-  - 历史命名与文档完全清理
+  - 浏览器端完整回归验收
+  - 登录状态搭建的最终收口
+  - 日推歌曲显示
 
-## 建议 CLI2 重点验证的点
+## 下一步目标
 
-- Music 页底部留白是否已消失
-- `Daily Playlist / Lyrics / Next Queue` 新比例是否自然
-- 后端二次重排后的搜索建议是否符合预期
-- Lyrics 是否能随首条结果正确显示
-- Help 弹层的开关、外链和占位区
-- 登录相关新路由为什么在运行时 `404`
-- Login 弹层的 timeline 动画是否存在抖动、遮挡、点击错位或 reduced-motion 分支问题
-- 全站隐藏右侧滚动条后，是否仍保持正常滚动和可达性
+### 主目标
 
-## 已知限制
+- 完成登录状态的搭建和整体验收
+- 完成日推歌曲的显示
 
-- `Daily Playlist` 当前仍是预留位，还没有接真实端口。
-- 登录状态当前依赖前端本地存储 cookie，并通过基础 API 查询状态，安全策略仍需后续收紧。
-- 当前环境未完成完整 UI 自动化测试依赖配置，因此尚未做完整回归。
-- 后端仍存在历史 `audio` 命名残留。
+### 下一步执行重点
 
-## 下一阶段计划
+- 在浏览器内完整回归登录状态链路，确认：
+  - 登录成功后状态立即可见
+  - 登出后状态立即归零
+  - 二维码刷新后旧二维码彻底失效
+- 继续清理前后端 Access Deck 登录文案与状态提示，使其与真实链路完全一致
+- 开始接入或展示日推歌曲数据，优先打通：
+  - 后端日推接口能力
+  - 前端 Music 页面中的日推区域显示
 
-### 目标
+## CLI2 建议继续重点验证
 
-- 进入音乐模块基础功能补齐阶段。
-- 在保持当前同源架构和已完成 Music/Access Deck UI 的前提下，继续补充日推等音乐基础能力。
-- 同时完成登录链路运行时问题定位，并继续清理命名债务。
-
-### 重点方向
-
-- 接入音乐模块基础功能：
-  - `Daily Playlist`
-  - 后续推荐 / 日推类基础入口
-- 跑通登录相关运行时链路，解决新增登录路由 `404` 问题。
-- 继续验收 Music 页的新结构、新比例、新歌词链路。
-- 清理后端与文档中的历史 `audio` 命名，提升可读性。
-- 视情况补全 Help 弹层和 Access Deck 的后续行为定义。
-
-## 当前重点文件
-
-- [frontend/index_v2.html](/F:/LLM/VIBE/frontend/index_v2.html)
-- [frontend/js/api.js](/F:/LLM/VIBE/frontend/js/api.js)
-- [frontend/js/state.js](/F:/LLM/VIBE/frontend/js/state.js)
-- [frontend/js/main.js](/F:/LLM/VIBE/frontend/js/main.js)
-- [frontend/js/renderers/music.js](/F:/LLM/VIBE/frontend/js/renderers/music.js)
-- [frontend/js/renderers/files.js](/F:/LLM/VIBE/frontend/js/renderers/files.js)
-- [frontend/js/renderers/access.js](/F:/LLM/VIBE/frontend/js/renderers/access.js)
-- [backend/include/music_service.hpp](/F:/LLM/VIBE/backend/include/music_service.hpp)
-- [backend/src/music_service.cpp](/F:/LLM/VIBE/backend/src/music_service.cpp)
-- [backend/src/router.cpp](/F:/LLM/VIBE/backend/src/router.cpp)
-- [backend/src/data_provider.cpp](/F:/LLM/VIBE/backend/src/data_provider.cpp)
+- 浏览器里完整回归：
+  - QR 登录
+  - 手机验证码登录
+  - Logout 后立刻查 Status
+  - 刷新二维码后旧二维码是否彻底失效
+- 再确认当前运行进程确实是最新的 `backend/build/Debug/vibe_backend.exe`
+- 观察二维码状态卡、登录状态卡、Logout 后的 UI 是否仍存在旧状态回流
+- 如后续继续接入日推歌曲，优先验证：
+  - API 是否稳定返回
+  - 前端是否正确显示
+  - 无数据时 fallback 是否清晰

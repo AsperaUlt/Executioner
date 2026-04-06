@@ -12,4 +12,4 @@ build/
 Thumbs.db
 
 .codex
-.api
+api

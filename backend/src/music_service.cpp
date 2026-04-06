@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <ctime>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -52,6 +53,45 @@ std::string url_encode_component(const std::string& value) {
   }
 
   return encoded;
+}
+
+std::string build_form_urlencoded(const Json& formData) {
+  std::string body;
+
+  for (auto it = formData.begin(); it != formData.end(); ++it) {
+    if (it.value().is_null()) {
+      continue;
+    }
+
+    std::string value;
+    if (it.value().is_string()) {
+      value = it.value().get<std::string>();
+    } else if (it.value().is_boolean()) {
+      value = it.value().get<bool>() ? "true" : "false";
+    } else if (it.value().is_number_integer()) {
+      value = std::to_string(it.value().get<long long>());
+    } else if (it.value().is_number_unsigned()) {
+      value = std::to_string(it.value().get<unsigned long long>());
+    } else if (it.value().is_number_float()) {
+      value = std::to_string(it.value().get<double>());
+    } else {
+      value = it.value().dump();
+    }
+
+    if (value.empty()) {
+      continue;
+    }
+
+    if (!body.empty()) {
+      body += '&';
+    }
+
+    body += url_encode_component(it.key());
+    body += '=';
+    body += url_encode_component(value);
+  }
+
+  return body;
 }
 
 std::string normalize_search_text(const std::string& value) {
@@ -337,29 +377,118 @@ MusicServiceResult MusicService::lyric_by_track_id(const std::string& trackId) c
   return result;
 }
 
-MusicServiceResult MusicService::login_with_email(const std::string& email, const std::string& password) const {
-  const auto upstream =
-      request_json("/api/music-account-email",
-                   "/login?email=" + url_encode_component(email) + "&password=" + url_encode_component(password));
+MusicServiceResult MusicService::create_qr_login_key() const {
+  const auto upstream = request_json("/api/login/qr/key", "/login/qr/key?timestamp=" + url_encode_component(std::to_string(std::time(nullptr))));
   if (!upstream.ok) {
     return upstream;
   }
 
   MusicServiceResult result = upstream;
-  result.data = normalize_login_payload(upstream.data);
-  result.message = result.data.value("hasCookie", false) ? "Login succeeded" : "Login completed";
+  const Json data = json_object_or_empty(upstream.data, "data");
+  result.data = {
+      {"code", upstream.data.value("code", 0)},
+      {"unikey", data.value("unikey", "")},
+  };
+  result.message = result.data.value("unikey", "").empty() ? "QR key unavailable" : "QR key ready";
   return result;
 }
 
-MusicServiceResult MusicService::login_with_cellphone(const std::string& phone,
-                                                      const std::string& password,
-                                                      const std::string& countryCode) const {
-  std::string path = "/login/cellphone?phone=" + url_encode_component(phone) + "&password=" + url_encode_component(password);
-  if (!trim_copy(countryCode).empty()) {
-    path += "&countrycode=" + url_encode_component(countryCode);
+MusicServiceResult MusicService::create_qr_login_image(const std::string& key) const {
+  const auto upstream = request_json("/api/login/qr/create",
+                                     "/login/qr/create?key=" + url_encode_component(key) + "&qrimg=true&timestamp=" +
+                                         url_encode_component(std::to_string(std::time(nullptr))));
+  if (!upstream.ok) {
+    return upstream;
   }
 
-  const auto upstream = request_json("/api/music-account-cellphone", path);
+  MusicServiceResult result = upstream;
+  const Json data = json_object_or_empty(upstream.data, "data");
+  result.data = {
+      {"code", upstream.data.value("code", 0)},
+      {"qrimg", data.value("qrimg", "")},
+      {"qrurl", data.value("qrurl", "")},
+      {"unikey", key},
+  };
+  result.message = result.data.value("qrimg", "").empty() ? "QR image unavailable" : "QR image ready";
+  return result;
+}
+
+MusicServiceResult MusicService::check_qr_login(const std::string& key) const {
+  const auto upstream = request_json("/api/login/qr/check",
+                                     "/login/qr/check?key=" + url_encode_component(key) + "&timestamp=" +
+                                         url_encode_component(std::to_string(std::time(nullptr))));
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  const int upstreamCode = upstream.data.value("code", 0);
+  const std::string upstreamMessage = upstream.data.value("message", "");
+  const std::string cookie = upstream.data.value("cookie", "");
+  std::string statusLabel = "Waiting for scan";
+  if (upstreamCode == 802) {
+    statusLabel = "Waiting for confirm";
+  } else if (upstreamCode == 803 || !trim_copy(cookie).empty()) {
+    statusLabel = "Authorized";
+  } else if (upstreamCode == 800) {
+    statusLabel = "Expired";
+  }
+
+  result.data = {
+      {"code", upstreamCode},
+      {"message", upstreamMessage},
+      {"statusLabel", statusLabel},
+      {"cookie", cookie},
+      {"hasCookie", !trim_copy(cookie).empty()},
+      {"authorized", upstreamCode == 803 || !trim_copy(cookie).empty()},
+      {"pending", upstreamCode == 801 || upstreamCode == 802},
+      {"expired", upstreamCode == 800},
+  };
+  if (result.data.value("authorized", false)) {
+    result.message = upstreamMessage.empty() ? "QR login authorized" : upstreamMessage;
+  } else if (result.data.value("expired", false)) {
+    result.message = upstreamMessage.empty() ? "QR code expired" : upstreamMessage;
+  } else {
+    result.message = upstreamMessage.empty() ? "QR login pending" : upstreamMessage;
+  }
+  return result;
+}
+
+MusicServiceResult MusicService::send_cellphone_login_code(const std::string& phone, const std::string& countryCode) const {
+  Json formData = {
+      {"phone", phone},
+  };
+  if (!trim_copy(countryCode).empty()) {
+    formData["ctcode"] = countryCode;
+  }
+
+  const auto upstream = request_json_post_form("/api/login/cellphone/code", "/captcha/sent", formData);
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  result.data = {
+      {"code", upstream.data.value("code", 0)},
+      {"sent", upstream.data.value("code", 0) == 200},
+      {"phone", phone},
+  };
+  result.message = result.data.value("sent", false) ? "Access code sent" : "Failed to send access code";
+  return result;
+}
+
+MusicServiceResult MusicService::login_with_cellphone_code(const std::string& phone,
+                                                           const std::string& captcha,
+                                                           const std::string& countryCode) const {
+  Json formData = {
+      {"phone", phone},
+      {"captcha", captcha},
+  };
+  if (!trim_copy(countryCode).empty()) {
+    formData["countrycode"] = countryCode;
+  }
+
+  const auto upstream = request_json_post_form("/api/login/cellphone", "/login/cellphone", formData);
   if (!upstream.ok) {
     return upstream;
   }
@@ -384,6 +513,26 @@ MusicServiceResult MusicService::login_status(const std::string& cookie) const {
   MusicServiceResult result = upstream;
   result.data = normalize_login_status_payload(upstream.data);
   result.message = result.data.value("loggedIn", false) ? "Login active" : "Not logged in";
+  return result;
+}
+
+MusicServiceResult MusicService::logout(const std::string& cookie) const {
+  std::string path = "/logout";
+  if (!trim_copy(cookie).empty()) {
+    path += "?cookie=" + url_encode_component(cookie);
+  }
+
+  const auto upstream = request_json("/api/logout", path);
+  if (!upstream.ok) {
+    return upstream;
+  }
+
+  MusicServiceResult result = upstream;
+  result.data = {
+      {"code", upstream.data.value("code", 0)},
+      {"loggedIn", false},
+  };
+  result.message = "Logged out";
   return result;
 }
 
@@ -462,6 +611,92 @@ MusicServiceResult MusicService::request_json(const std::string& vibeRoute, cons
     result.details = {
         {"upstreamStatus", response->status},
         {"upstreamBodyPreview", truncate_for_log(body)},
+    };
+    return result;
+  }
+}
+
+MusicServiceResult MusicService::request_json_post_form(const std::string& vibeRoute,
+                                                        const std::string& upstreamPath,
+                                                        const Json& formData) const {
+  httplib::Client client(upstreamBaseUrl_);
+  client.set_connection_timeout(timeoutMs_ / 1000, (timeoutMs_ % 1000) * 1000);
+  client.set_read_timeout(timeoutMs_ / 1000, (timeoutMs_ % 1000) * 1000);
+  client.set_write_timeout(timeoutMs_ / 1000, (timeoutMs_ % 1000) * 1000);
+
+  const std::string target = upstreamBaseUrl_ + upstreamPath;
+  const std::string body = build_form_urlencoded(formData);
+  const auto response = client.Post(upstreamPath.c_str(),
+                                    {{"Accept", "application/json"}},
+                                    body,
+                                    "application/x-www-form-urlencoded");
+  if (!response) {
+    const auto err = response.error();
+    std::string error = "music_service_unavailable";
+    std::string message = "Node music service is not running";
+    int httpStatus = 503;
+
+    if (err == httplib::Error::Read || err == httplib::Error::Write || err == httplib::Error::ConnectionTimeout) {
+      error = "music_service_timeout";
+      message = "Node music service timed out";
+      httpStatus = 504;
+    }
+
+    log_music_request(vibeRoute, target, "failed", httplib::to_string(err));
+    auto result = make_error(httpStatus, error, message, target);
+    result.details = {
+        {"upstreamError", httplib::to_string(err)},
+    };
+    return result;
+  }
+
+  if (response->status != 200) {
+    const std::string bodyPreview = truncate_for_log(response->body);
+    log_music_request(vibeRoute,
+                      target,
+                      "failed",
+                      "upstream_status_" + std::to_string(response->status) + " body=" + bodyPreview);
+    auto result = make_error(502,
+                             "music_service_invalid_response",
+                             "Node music service returned HTTP " + std::to_string(response->status),
+                             target);
+    result.details = {
+        {"upstreamStatus", response->status},
+        {"upstreamBodyPreview", bodyPreview},
+    };
+    return result;
+  }
+
+  const auto trimmedBody = trim_copy(response->body);
+  if (trimmedBody.empty()) {
+    log_music_request(vibeRoute, target, "failed", "empty_response");
+    auto result = make_error(502, "music_service_empty_response", "Node music service returned an empty response", target);
+    result.details = {
+        {"upstreamStatus", response->status},
+    };
+    return result;
+  }
+
+  try {
+    auto parsed = Json::parse(trimmedBody);
+    log_music_request(vibeRoute, target, "success", "");
+    return {
+        true,
+        200,
+        "",
+        "Upstream request completed",
+        target,
+        std::move(parsed),
+    };
+  } catch (const std::exception& ex) {
+    log_music_request(vibeRoute, target, "failed", "json_parse_error");
+    auto result = make_error(502,
+                             "music_service_invalid_response",
+                             std::string("Failed to parse upstream JSON: ") + ex.what(),
+                             target);
+    result.details = {
+        {"upstreamStatus", response->status},
+        {"upstreamBodyPreview", truncate_for_log(trimmedBody)},
     };
     return result;
   }

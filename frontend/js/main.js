@@ -5,6 +5,8 @@
     global.VibeRenderers;
 
   const state = createState();
+  const THEME_STORAGE_KEY = "vibe.theme";
+  let themeTransitionTimeline = null;
   let initialized = false;
   let inFlight = false;
   let activeRoute = "home";
@@ -69,6 +71,112 @@
 
   function prefersReducedMotion() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function getTheme() {
+    const theme = document.documentElement.dataset.theme;
+    return theme === "light" ? "light" : "dark";
+  }
+
+  function updateThemeToggleUi(theme, disabled = false) {
+    const icon = document.querySelector('[data-field="themeToggleIcon"]');
+    const label = document.querySelector('[data-field="themeToggleLabel"]');
+    const button = document.querySelector('[data-action="toggle-theme"]');
+    if (icon) {
+      icon.textContent = theme === "light" ? "dark_mode" : "light_mode";
+    }
+    if (label) {
+      label.textContent = theme === "light" ? "Night Mode" : "Day Mode";
+    }
+    if (button) {
+      button.disabled = disabled;
+      button.classList.toggle("opacity-60", disabled);
+      button.classList.toggle("cursor-wait", disabled);
+    }
+  }
+
+  function applyTheme(theme, options = {}) {
+    const { persist = true, notify = true, disabled = false } = options;
+    const resolvedTheme = theme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+    if (persist) {
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
+      } catch (_error) {
+        // Keep the UI working even if storage is unavailable.
+      }
+    }
+    updateThemeToggleUi(resolvedTheme, disabled);
+    if (notify) {
+      window.dispatchEvent(new CustomEvent("vibe:themechange", { detail: { theme: resolvedTheme } }));
+    }
+  }
+
+  function animateThemeTransition(nextTheme) {
+    const gsap = window.gsap;
+    if (nextTheme !== "light" || !gsap || prefersReducedMotion()) {
+      applyTheme(nextTheme);
+      return;
+    }
+
+    const overlay = document.querySelector('[data-module="theme-transition-overlay"]');
+    const wash = document.querySelector('[data-module="theme-transition-wash"]');
+    const beam = document.querySelector('[data-module="theme-transition-beam"]');
+    const core = document.querySelector('[data-module="theme-transition-core"]');
+    const ring = document.querySelector('[data-module="theme-transition-ring"]');
+    const sweep = document.querySelector('[data-module="theme-transition-sweep"]');
+    if (!overlay || !wash || !beam || !core || !ring || !sweep) {
+      applyTheme(nextTheme);
+      return;
+    }
+
+    themeTransitionTimeline?.kill();
+    overlay.style.visibility = "visible";
+    overlay.dataset.transition = "to-light";
+    updateThemeToggleUi(getTheme(), true);
+
+    gsap.set(overlay, { autoAlpha: 0 });
+    gsap.set(wash, { autoAlpha: 0, scaleY: 1.08, yPercent: 6, transformOrigin: "50% 50%" });
+    gsap.set(beam, { autoAlpha: 0, scaleY: 0.42, scaleX: 0.34, yPercent: 4, transformOrigin: "50% 50%" });
+    gsap.set(core, { autoAlpha: 0, scale: 0.46, filter: "blur(18px)", transformOrigin: "50% 50%" });
+    gsap.set(ring, { autoAlpha: 0, scale: 0.82, rotation: -8, transformOrigin: "50% 50%" });
+    gsap.set(sweep, { autoAlpha: 0, xPercent: -18, yPercent: 4, rotation: -10, transformOrigin: "50% 50%" });
+
+    themeTransitionTimeline = gsap.timeline({
+      defaults: { ease: "power2.out" },
+      onComplete: () => {
+        gsap.set(overlay, { clearProps: "opacity,visibility" });
+        gsap.set([wash, beam, core, ring, sweep], { clearProps: "all" });
+        themeTransitionTimeline = null;
+        updateThemeToggleUi(getTheme(), false);
+      },
+    });
+
+    themeTransitionTimeline
+      .to(overlay, { autoAlpha: 1, duration: 0.24 }, 0)
+      .to(beam, { autoAlpha: 0.32, scaleY: 0.9, scaleX: 0.46, yPercent: 0, duration: 0.58, ease: "sine.out" }, 0.02)
+      .to(core, { autoAlpha: 0.34, scale: 0.92, filter: "blur(12px)", duration: 0.64, ease: "sine.out" }, 0.06)
+      .to(ring, { autoAlpha: 0.24, scale: 1.04, rotation: 0, duration: 0.72, ease: "sine.out" }, 0.1)
+      .to(sweep, { autoAlpha: 0.26, xPercent: 10, yPercent: 0, duration: 0.78, ease: "sine.inOut" }, 0.16)
+      .addLabel("reveal", 0.38)
+      .call(() => {
+        applyTheme("light", { notify: true, disabled: true });
+      }, null, "reveal")
+      .to(wash, { autoAlpha: 0.8, scaleY: 1, yPercent: 0, duration: 0.6, ease: "sine.out" }, "reveal-=0.04")
+      .to(beam, { scaleX: 0.62, autoAlpha: 0.16, duration: 0.54, ease: "sine.inOut" }, "reveal")
+      .to(core, { scale: 1.08, autoAlpha: 0.16, duration: 0.56, ease: "sine.out" }, "reveal+=0.04")
+      .to(ring, { scale: 1.1, autoAlpha: 0.08, duration: 0.62, ease: "sine.out" }, "reveal+=0.06")
+      .to(sweep, { xPercent: 24, autoAlpha: 0.14, duration: 0.58, ease: "sine.inOut" }, "reveal+=0.08")
+      .to(
+        overlay,
+        {
+          autoAlpha: 0,
+          duration: 0.48,
+          ease: "sine.inOut",
+        },
+        "reveal+=0.5"
+      );
   }
 
   function syncFooterOffset() {
@@ -140,16 +248,16 @@
     }
 
     inFlight = true;
-    setStatus("Loading live data...");
+    setStatus("Loading data...");
 
     try {
       const payload = await fetchAllData();
       Object.assign(state, mergeData(state, payload));
       renderAll();
-      setStatus("Live data connected");
+      setStatus("Live");
     } catch (error) {
       console.error(error);
-      setStatus("Backend offline, showing fallback values");
+      setStatus("Offline");
       renderAll();
     } finally {
       inFlight = false;
@@ -214,6 +322,10 @@
     }, 1000);
 
     document.querySelector('[data-action="refresh"]')?.addEventListener("click", throttledRefresh);
+    document.querySelector('[data-action="toggle-theme"]')?.addEventListener("click", () => {
+      const nextTheme = getTheme() === "dark" ? "light" : "dark";
+      animateThemeTransition(nextTheme);
+    });
   }
 
   function bindLayoutSync() {
@@ -255,6 +367,10 @@
     const targetFps = 30;
     const minFrameInterval = 1000 / targetFps;
     const particleCount = 18;
+
+    function getParticleColor() {
+      return getTheme() === "light" ? "rgba(13, 148, 136, 0.28)" : "rgba(151, 247, 255, 0.55)";
+    }
 
     function resizeCanvas() {
       width = window.innerWidth;
@@ -305,7 +421,7 @@
       lastFrame = timestamp;
 
       context.clearRect(0, 0, width, height);
-      context.fillStyle = "rgba(151, 247, 255, 0.55)";
+      context.fillStyle = getParticleColor();
 
       particles.forEach((particle, index) => {
         particle.phase += 0.015;
@@ -338,6 +454,7 @@
     }
 
     initialized = true;
+    updateThemeToggleUi(getTheme());
     bindNavigation();
     bindUiActions();
     bindLayoutSync();

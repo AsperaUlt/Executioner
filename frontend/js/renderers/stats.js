@@ -167,7 +167,7 @@
     setText("tasksClosedTasksView", tasksCompleted);
     setText("tasksCompleted", tasksCompleted);
     setText("focusScore", summary?.focusScore ?? "--");
-    setText("greeting", summary?.greeting ?? "Awaiting signal");
+    setText("greeting", summary?.greeting ?? "Ready");
     renderTaskEfficiency(stats?.taskEfficiency);
     renderDeepWorkChart(stats?.deepWorkHours);
     renderInsights(stats?.insights ?? []);

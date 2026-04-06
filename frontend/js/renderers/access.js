@@ -1,7 +1,12 @@
 (function attachAccessRenderer(global) {
-  const { fetchLoginStatus, loginWithCellphone, loginWithEmail } = global.VibeApi;
-  const COOKIE_STORAGE_KEY = "vibe.music.cookie";
+  const { checkQrLogin, commitQrLogin, createQrLoginImage, createQrLoginKey, fetchLogStatus, loginWithCellphone, logout, sendCellphoneLoginCode } = global.VibeApi;
   let activeModalTimeline = null;
+  let sessionLoggedIn = false;
+  let sendCodeCooldownTimer = null;
+  let sendCodeSecondsRemaining = 0;
+  let qrPollTimer = null;
+  let activeQrKey = "";
+  let qrGeneration = 0;
 
   function qs(selector) {
     return document.querySelector(selector);
@@ -32,54 +37,215 @@
     node.classList.toggle("text-slate-300", !isError);
   }
 
-  function readStoredCookie() {
-    try {
-      return window.localStorage.getItem(COOKIE_STORAGE_KEY) || "";
-    } catch (_error) {
-      return "";
+  function setQrState({ image = "", status = "Ready to generate", meta = "No QR session yet." } = {}) {
+    const imageNode = qs('[data-module="qr-login-image"]');
+    const emptyNode = qs('[data-module="qr-login-empty"]');
+    const statusNode = qs('[data-field="qrLoginState"]');
+    const metaNode = qs('[data-field="qrLoginMeta"]');
+    const refreshButton = qs('[data-action="refresh-qr-login"]');
+
+    if (imageNode) {
+      imageNode.src = image || "";
+      imageNode.hidden = !image;
+    }
+    if (emptyNode) {
+      emptyNode.hidden = Boolean(image);
+    }
+    if (statusNode) {
+      statusNode.textContent = status;
+    }
+    if (metaNode) {
+      metaNode.textContent = meta;
+    }
+    if (refreshButton) {
+      refreshButton.disabled = false;
+      refreshButton.classList.remove("opacity-60", "cursor-not-allowed");
     }
   }
 
-  function writeStoredCookie(cookie) {
-    try {
-      if (cookie) {
-        window.localStorage.setItem(COOKIE_STORAGE_KEY, cookie);
-      } else {
-        window.localStorage.removeItem(COOKIE_STORAGE_KEY);
-      }
-    } catch (_error) {
-      // Ignore storage failures and keep UI usable.
+  function stopQrPolling() {
+    if (qrPollTimer) {
+      window.clearInterval(qrPollTimer);
+      qrPollTimer = null;
     }
+    activeQrKey = "";
   }
 
-  async function refreshLoginStatus() {
-    const cookie = readStoredCookie();
-    if (!cookie) {
-      setText("loginSessionState", "Not signed in");
-      setText("loginSessionMeta", "No saved cookie loaded");
+  async function pollQrLoginStatus(expectedKey, generation) {
+    if (!expectedKey || generation !== qrGeneration || expectedKey !== activeQrKey) {
       return;
     }
 
     try {
-      const payload = await fetchLoginStatus(cookie);
+      const payload = await checkQrLogin(expectedKey);
       const data = payload?.data || {};
-      if (data.loggedIn) {
+      if (generation !== qrGeneration || expectedKey !== activeQrKey) {
+        return;
+      }
+
+      if (data.authorized) {
+        setQrState({
+          image: qs('[data-module="qr-login-image"]')?.src || "",
+          status: data.statusLabel || "Authorized",
+          meta: data.message || "Scan confirmed. Session is being activated.",
+        });
+        stopQrPolling();
+        await commitQrLogin(expectedKey);
+        setFeedback("QR login authorized.");
+        await refreshLoginStatus();
+        return;
+      }
+
+      if (data.expired) {
+        setQrState({
+          image: "",
+          status: data.statusLabel || "Expired",
+          meta: data.message || "QR code expired. Generate a new one.",
+        });
+        stopQrPolling();
+        setFeedback("QR code expired. Refresh to generate a new one.", true);
+        return;
+      }
+
+      setQrState({
+        image: qs('[data-module="qr-login-image"]')?.src || "",
+        status: data.statusLabel || (data.code === 802 ? "Waiting for confirm" : "Waiting for scan"),
+        meta: data.message || "Open the music app and scan this code.",
+      });
+    } catch (_error) {
+      stopQrPolling();
+      setFeedback("Unable to poll QR login status.", true);
+    }
+  }
+
+  async function loadQrLogin() {
+    stopQrPolling();
+    qrGeneration += 1;
+    const generation = qrGeneration;
+    const refreshButton = qs('[data-action="refresh-qr-login"]');
+    if (refreshButton) {
+      refreshButton.disabled = true;
+      refreshButton.classList.add("opacity-60", "cursor-not-allowed");
+    }
+
+    setQrState({
+      image: "",
+      status: "Generating",
+      meta: "Requesting a fresh QR login session.",
+    });
+
+    try {
+      const keyPayload = await createQrLoginKey();
+      const key = keyPayload?.data?.unikey || "";
+      if (!key) {
+        throw new Error("QR login key missing.");
+      }
+
+      activeQrKey = key;
+      const imagePayload = await createQrLoginImage(key);
+      if (generation !== qrGeneration || key !== activeQrKey) {
+        return;
+      }
+      const qrimg = imagePayload?.data?.qrimg || "";
+      setQrState({
+        image: qrimg,
+        status: "Waiting for scan",
+        meta: "Open the music app and scan this QR code.",
+      });
+      qrPollTimer = window.setInterval(() => {
+        void pollQrLoginStatus(key, generation);
+      }, 2500);
+      void pollQrLoginStatus(key, generation);
+      setFeedback("QR login ready. Scan the code with your music app.");
+    } catch (error) {
+      setQrState({
+        image: "",
+        status: "Unavailable",
+        meta: "Could not prepare QR login.",
+      });
+      setFeedback(error?.message || "QR login setup failed.", true);
+    } finally {
+      if (refreshButton) {
+        refreshButton.disabled = false;
+        refreshButton.classList.remove("opacity-60", "cursor-not-allowed");
+      }
+    }
+  }
+
+  function setSessionActionsDisabled(isBusy) {
+    qsa("[data-session-action]").forEach((button) => {
+      button.disabled = isBusy;
+      button.classList.toggle("opacity-60", isBusy);
+      button.classList.toggle("cursor-not-allowed", isBusy);
+    });
+  }
+
+  function syncSessionActionState() {
+    const logoutButton = qs('[data-session-action="logout"]');
+    if (logoutButton) {
+      logoutButton.disabled = !sessionLoggedIn;
+      logoutButton.classList.toggle("opacity-60", !sessionLoggedIn);
+      logoutButton.classList.toggle("cursor-not-allowed", !sessionLoggedIn);
+    }
+  }
+
+  function syncSendCodeState() {
+    const button = qs('[data-action="send-phone-code"]');
+    if (!button) {
+      return;
+    }
+
+    const disabled = sendCodeSecondsRemaining > 0;
+    button.disabled = disabled;
+    button.classList.toggle("opacity-60", disabled);
+    button.classList.toggle("cursor-not-allowed", disabled);
+    button.textContent = disabled ? `Resend in ${sendCodeSecondsRemaining}s` : "Send Code";
+  }
+
+  function startSendCodeCooldown(seconds = 60) {
+    if (sendCodeCooldownTimer) {
+      window.clearInterval(sendCodeCooldownTimer);
+    }
+
+    sendCodeSecondsRemaining = seconds;
+    syncSendCodeState();
+    sendCodeCooldownTimer = window.setInterval(() => {
+      sendCodeSecondsRemaining = Math.max(0, sendCodeSecondsRemaining - 1);
+      syncSendCodeState();
+      if (sendCodeSecondsRemaining === 0 && sendCodeCooldownTimer) {
+        window.clearInterval(sendCodeCooldownTimer);
+        sendCodeCooldownTimer = null;
+      }
+    }, 1000);
+  }
+
+  async function refreshLoginStatus() {
+    setSessionActionsDisabled(true);
+    try {
+      const payload = await fetchLogStatus();
+      const data = payload?.data || {};
+      sessionLoggedIn = Boolean(data.loggedIn);
+      if (sessionLoggedIn) {
         setText("loginSessionState", data.nickname || "Session active");
-        setText("loginSessionMeta", `User ${data.userId || data.accountId || "--"} is logged in`);
+        setText("loginSessionMeta", `Session active for user ${data.userId || data.accountId || "--"}`);
       } else {
-        setText("loginSessionState", "Cookie loaded");
-        setText("loginSessionMeta", "Stored cookie exists, but upstream status is not active");
+        setText("loginSessionState", "Signed out");
+        setText("loginSessionMeta", "No active session cookie");
       }
     } catch (_error) {
-      setText("loginSessionState", "Cookie loaded");
-      setText("loginSessionMeta", "Unable to verify upstream login status");
+      sessionLoggedIn = false;
+      setText("loginSessionState", "Status unavailable");
+      setText("loginSessionMeta", "Could not verify login status");
+    } finally {
+      setSessionActionsDisabled(false);
+      syncSessionActionState();
     }
   }
 
   function setActiveTab(tab) {
-    const isEmail = tab !== "cellphone";
+    const isQr = tab !== "cellphone";
     qsa("[data-login-tab]").forEach((button) => {
-      const isActive = button.dataset.loginTab === (isEmail ? "email" : "cellphone");
+      const isActive = button.dataset.loginTab === (isQr ? "qr" : "cellphone");
       button.classList.toggle("border-primary/30", isActive);
       button.classList.toggle("bg-primary/12", isActive);
       button.classList.toggle("text-primary", isActive);
@@ -88,8 +254,14 @@
       button.classList.toggle("text-slate-300", !isActive);
     });
 
-    qs('[data-module="login-form-email"]')?.classList.toggle("hidden", !isEmail);
-    qs('[data-module="login-form-cellphone"]')?.classList.toggle("hidden", isEmail);
+    qs('[data-module="login-form-qr"]')?.classList.toggle("hidden", !isQr);
+    qs('[data-module="login-form-cellphone"]')?.classList.toggle("hidden", isQr);
+    if (isQr) {
+      void loadQrLogin();
+    } else {
+      stopQrPolling();
+      qrGeneration += 1;
+    }
   }
 
   function prefersReducedMotion() {
@@ -170,8 +342,9 @@
 
     modal.hidden = false;
     document.body.style.overflow = "hidden";
-    setActiveTab("email");
-    setFeedback("Use your Netease account. The returned cookie will be stored in this browser for later authenticated requests.");
+    setActiveTab("qr");
+    setFeedback("Use QR login or request an access code for phone login.");
+    syncSendCodeState();
     animateModalOpen(modal);
     void refreshLoginStatus();
   }
@@ -194,6 +367,8 @@
     }
 
     animateModalClose(modal, () => {
+      stopQrPolling();
+      qrGeneration += 1;
       modal.hidden = true;
       document.body.style.overflow = "";
     });
@@ -211,49 +386,21 @@
     });
   }
 
-  async function handleEmailLogin(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const email = form.elements.email?.value?.trim() || "";
-    const password = form.elements.password?.value || "";
-    if (!email || !password) {
-      setFeedback("Email and password are required.", true);
-      return;
-    }
-
-    setFeedback("Signing in with email...");
-    try {
-      const payload = await loginWithEmail({ email, password });
-      const data = payload?.data || {};
-      if (data.cookie) {
-        writeStoredCookie(data.cookie);
-      }
-      setFeedback(`Signed in as ${data.nickname || email}.`);
-      await refreshLoginStatus();
-      form.reset();
-    } catch (error) {
-      setFeedback(error?.message || "Email login failed.", true);
-    }
-  }
-
   async function handleCellphoneLogin(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const phone = form.elements.phone?.value?.trim() || "";
-    const password = form.elements.password?.value || "";
+    const captcha = form.elements.captcha?.value?.trim() || "";
     const countrycode = form.elements.countrycode?.value?.trim() || "";
-    if (!phone || !password) {
-      setFeedback("Phone and password are required.", true);
+    if (!phone || !captcha) {
+      setFeedback("Phone and access code are required.", true);
       return;
     }
 
-    setFeedback("Signing in with cellphone...");
+    setFeedback("Signing in with access code...");
     try {
-      const payload = await loginWithCellphone({ phone, password, countrycode });
+      const payload = await loginWithCellphone({ phone, captcha, countrycode });
       const data = payload?.data || {};
-      if (data.cookie) {
-        writeStoredCookie(data.cookie);
-      }
       setFeedback(`Signed in as ${data.nickname || phone}.`);
       await refreshLoginStatus();
       form.reset();
@@ -261,7 +408,70 @@
         form.elements.countrycode.value = countrycode || "86";
       }
     } catch (error) {
-      setFeedback(error?.message || "Cellphone login failed.", true);
+      setFeedback(error?.message || "Phone login failed.", true);
+    }
+  }
+
+  async function handleSendPhoneCode() {
+    const form = qs('[data-module="login-form-cellphone"]');
+    if (!form) {
+      return;
+    }
+
+    const phone = form.elements.phone?.value?.trim() || "";
+    const countrycode = form.elements.countrycode?.value?.trim() || "";
+    if (!phone) {
+      setFeedback("Enter your phone number before requesting an access code.", true);
+      return;
+    }
+
+    const button = qs('[data-action="send-phone-code"]');
+    button?.classList.add("opacity-60");
+    button && (button.disabled = true);
+    setFeedback("Sending access code...");
+    try {
+      await sendCellphoneLoginCode({ phone, countrycode });
+      setFeedback(`Access code sent to ${phone}.`);
+      startSendCodeCooldown(60);
+    } catch (error) {
+      setFeedback(error?.message || "Failed to send access code.", true);
+      button && (button.disabled = false);
+      button?.classList.remove("opacity-60");
+      syncSendCodeState();
+    }
+  }
+
+  async function handleStatusInquiry() {
+    setFeedback("Checking login status...");
+    await refreshLoginStatus();
+    if (sessionLoggedIn) {
+      setFeedback("Session is active.");
+    } else {
+      setFeedback("No active session found.");
+    }
+  }
+
+  async function handleLogout() {
+    if (!sessionLoggedIn) {
+      setFeedback("No active session to log out.");
+      return;
+    }
+
+    setSessionActionsDisabled(true);
+    setFeedback("Logging out...");
+    try {
+      await logout();
+      stopQrPolling();
+      qrGeneration += 1;
+      sessionLoggedIn = false;
+      setText("loginSessionState", "Signed out");
+      setText("loginSessionMeta", "No active session cookie");
+      setFeedback("Logged out.");
+    } catch (error) {
+      setFeedback(error?.message || "Logout failed.", true);
+    } finally {
+      setSessionActionsDisabled(false);
+      syncSessionActionState();
     }
   }
 
@@ -294,12 +504,23 @@
 
     qsa("[data-login-tab]").forEach((button) => {
       button.addEventListener("click", () => {
-        setActiveTab(button.dataset.loginTab || "email");
+        setActiveTab(button.dataset.loginTab || "qr");
       });
     });
 
-    qs('[data-module="login-form-email"]')?.addEventListener("submit", handleEmailLogin);
     qs('[data-module="login-form-cellphone"]')?.addEventListener("submit", handleCellphoneLogin);
+    qs('[data-action="refresh-qr-login"]')?.addEventListener("click", () => {
+      void loadQrLogin();
+    });
+    qs('[data-action="send-phone-code"]')?.addEventListener("click", () => {
+      void handleSendPhoneCode();
+    });
+    qs('[data-session-action="status"]')?.addEventListener("click", () => {
+      void handleStatusInquiry();
+    });
+    qs('[data-session-action="logout"]')?.addEventListener("click", () => {
+      void handleLogout();
+    });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !qs('[data-module="login-modal"]')?.hidden) {
@@ -315,6 +536,7 @@
     } else if (window.location.hash === "#help") {
       openHelpModal();
     } else {
+      syncSendCodeState();
       void refreshLoginStatus();
     }
   }
